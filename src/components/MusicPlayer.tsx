@@ -112,10 +112,10 @@ export function MusicPlayer({ songTitle, artist, audioUrl, variant = 'compact' }
   const pct = duration ? (progress / duration) * 100 : 0
 
   if (variant === 'compact') {
-    // Mini player for directory cards — single row
+    // Mini player for directory cards — single row, pinned to card bottom
     return (
       <div
-        className="flex items-center gap-1.5 px-2 py-1 border-t border-[var(--brand-border)] bg-[var(--brand-surface)] group/player"
+        className="flex items-center gap-1.5 px-2 py-1 border-t border-[var(--brand-border)] bg-[var(--brand-surface)] group/player flex-shrink-0"
         onClick={(e) => e.stopPropagation()}
       >
         <audio ref={audioRef} src={audioUrl} preload="metadata" />

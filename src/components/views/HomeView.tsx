@@ -46,7 +46,6 @@ export function HomeView() {
 
         {/* LEFT COLUMN — narrow (col-span-3) */}
         <div className="lg:col-span-3 flex flex-col gap-6 lg:border-r border-[var(--brand-border)] lg:pr-4">
-          {/* Secondary article 1 */}
           {rest[0] && (
             <div className="pb-4 border-b border-[var(--brand-border)]">
               <p className="font-condensed text-[9px] uppercase tracking-widest text-[var(--brand-orange)] mb-1">{rest[0].category}</p>
@@ -146,11 +145,24 @@ export function HomeView() {
           {/* Divider */}
           <div className="border-t-2 border-[var(--brand-ink)] mb-4" />
 
-          {/* Activity Feed + Recommendations — side by side on desktop */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ActivityFeed />
-            <Recommendations />
-          </div>
+          {/* Secondary article cards — 2-column grid for filler */}
+          {rest.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {rest.slice(0, 4).map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => setView('article-detail', a.id)}
+                  className="text-left border border-[var(--brand-border)] p-3 hover:border-[var(--brand-navy)] hover:bg-[var(--brand-surface-2)] transition-all group"
+                >
+                  <p className="font-condensed text-[9px] uppercase tracking-widest text-[var(--brand-orange)] mb-1">{a.category}</p>
+                  <h4 className="font-serif text-sm font-semibold leading-tight mb-1 group-hover:text-[var(--brand-navy)] line-clamp-2">
+                    {a.title}
+                  </h4>
+                  <p className="font-mono text-[9px] text-[var(--brand-ink-muted)]">{a.date}</p>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* RIGHT COLUMN — narrow (col-span-3) */}
@@ -206,6 +218,28 @@ export function HomeView() {
               <ArrowUpRight className="w-2.5 h-2.5" /> DAFTAR
             </button>
           </form>
+        </div>
+      </div>
+
+      {/* === FULL-WIDTH ACTIVITY + RECOMMENDATIONS === */}
+      {/* Moved out of 3-column grid to give them more horizontal space */}
+      <div className="mt-10">
+        {/* Section header */}
+        <div className="border-t-2 border-b border-[var(--brand-ink)] py-3 mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h2 className="font-serif text-2xl md:text-3xl text-[var(--brand-ink)]">
+              Aktivitas <span className="italic text-[var(--brand-navy)]">&amp; Rekomendasi</span>
+            </h2>
+          </div>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-[var(--brand-ink-muted)] hidden md:block">
+            EDISI BERJALAN
+          </p>
+        </div>
+
+        {/* Activity Feed + Recommendations — side by side, full width */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <ActivityFeed />
+          <Recommendations />
         </div>
       </div>
     </div>

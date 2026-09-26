@@ -152,16 +152,16 @@ export function DirectoryView() {
         </div>
       ) : (
         <>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 items-stretch">
           {paged.map((s, i) => (
             <ScrollReveal
               key={s.id}
               delay={((i % 4) + 1) as 1 | 2 | 3 | 4}
-              className="group block border border-[var(--brand-ink)] bg-[var(--brand-surface-2)] transition-all text-left lift-on-hover overflow-hidden"
+              className="group border border-[var(--brand-ink)] bg-[var(--brand-surface-2)] transition-all text-left lift-on-hover overflow-hidden flex flex-col h-full"
             >
-              {/* Photo area */}
+              {/* Photo area — fixed at top */}
               <div
-                className="relative aspect-[3/4] overflow-hidden border-b border-[var(--brand-border)] cursor-pointer"
+                className="relative aspect-[3/4] overflow-hidden border-b border-[var(--brand-border)] cursor-pointer flex-shrink-0"
                 onClick={() => setView('profile', s.id)}
               >
                 <PlaceholderImage
@@ -181,20 +181,20 @@ export function DirectoryView() {
                 </div>
               </div>
 
-              {/* Name + tagline */}
+              {/* Name + tagline — flex-grow to fill space, pushes music player to bottom */}
               <div
-                className="p-3 cursor-pointer"
+                className="p-3 cursor-pointer flex-grow flex flex-col justify-between"
                 onClick={() => setView('profile', s.id)}
               >
                 <h3 className="font-serif font-bold text-base leading-tight mb-1 group-hover:text-[var(--brand-navy)] transition-colors">
                   {s.name}
                 </h3>
-                <p className="text-[11px] italic text-[var(--brand-ink-muted)] line-clamp-2 leading-relaxed">
+                <p className="text-[11px] italic text-[var(--brand-ink-muted)] line-clamp-2 leading-relaxed mt-auto">
                   "{s.tagline || 'Belum ada tagline.'}"
                 </p>
               </div>
 
-              {/* Music player (compact, only if song exists) */}
+              {/* Music player — fixed at bottom (flex-shrink-0 prevents collapse) */}
               {s.laguUrl && (
                 <MusicPlayer
                   songTitle={s.lagu}
