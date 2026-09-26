@@ -1,0 +1,286 @@
+// Prisma schema for Statistika '25 website
+//
+// Database provider: configurable
+//   - Local dev (default): SQLite
+//   - Production / Supabase: PostgreSQL
+//
+// To switch to Supabase PostgreSQL:
+//   1. Update DATABASE_URL in .env with Supabase pooler URL
+//   2. Change `provider = "sqlite"` → `provider = "postgresql"` below
+//   3. Run: bun run db:push && bun run db:seed
+//   4. See SUPABASE_SETUP.md for full migration guide
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // ★ For Supabase, change "sqlite" → "postgresql"
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+  // ★ When using Supabase connection pooler, also set directUrl for migrations
+  // directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  role         String   @default("user") // "admin" | "user"
+  displayName  String?
+  theme        String   @default("light") // "light" | "dark"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  articles     Article[]
+  events       Event[]
+  galleryItems Gallery[]
+  students     Student[]
+  rsvps        Rsvp[]
+  comments     Comment[]
+  likes        Like[]
+  bookmarks    Bookmark[]
+  series       Series[]
+  // Follow system
+  following    Follow[] @relation("Follower")
+  followers    Follow[] @relation("Following")
+  // Notifications
+  notificationsReceived Notification[] @relation("NotificationRecipient")
+  notificationsTriggered Notification[] @relation("NotificationActor")
+  // Messaging
+  sentMessages     Message[] @relation("MessageSender")
+  receivedMessages Message[] @relation("MessageRecipient")
+}
+
+model Student {
+  id          String   @id @default(cuid())
+  name        String
+  nickname    String?  // nama panggilan
+  nim         String   @unique
+  kelas       String   @default("A") // "A" | "B"
+  angkatan    String   @default("2025") // year of admission
+  semester    Int      @default(1) // current semester 1-8
+  tagline     String?
+  bio         String?
+  instagram   String?
+  asalDaerah  String?
+  imageUrl    String?
+  ownerId     String?  // user id who can edit this profile
+  owner       User?    @relation(fields: [ownerId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Theme song
+  lagu        String?  // song title
+  laguArtis   String?  // artist name
+  laguUrl     String?  // audio URL (mp3/ogg/etc)
+}
+
+model Article {
+  id          String   @id @default(cuid())
+  title       String
+  excerpt     String
+  content     String?
+  category    String   @default("Berita") // Berita | Event | Pengumuman
+  date        String   // displayed date string
+  author      String
+  imageUrl    String?
+  published   Boolean  @default(true)
+  authorId    String
+  authorUser  User     @relation(fields: [authorId], references: [id])
+  comments    Comment[]
+  likes       Like[]
+  bookmarks   Bookmark[]
+  tags        ArticleTag[]
+  seriesItems SeriesItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Series {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String?
+  creatorId   String
+  creator     User     @relation(fields: [creatorId], references: [id])
+  items       SeriesItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SeriesItem {
+  id        String   @id @default(cuid())
+  seriesId  String
+  articleId String
+  order     Int      @default(0)
+  series    Series   @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([seriesId, articleId])
+}
+
+model Dosen {
+  id          String   @id @default(cuid())
+  name        String
+  title       String?  // Gelar: "Dr.", "M.Si", etc.
+  role        String   @default("Dosen") // "Kaprodi" | "Dosen" | "Lab"
+  expertise   String?  // Bidang keahlian
+  bio         String?  // Biografi singkat
+  email       String?
+  imageUrl    String?
+  courses     String?  // Mata kuliah yang diajar (comma-separated)
+  order       Int      @default(0) // for sorting
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#e892b8") // hex color for tag badge
+  articles  ArticleTag[]
+  createdAt DateTime @default(now())
+}
+
+model ArticleTag {
+  articleId String
+  tagId     String
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+
+  @@id([articleId, tagId])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  articleId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, articleId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  articleId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, articleId])
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  location    String?
+  startDate   String   // ISO date string for display
+  endDate     String?
+  category    String   @default("Akademik")
+  imageUrl    String?
+  organizerId String
+  organizer   User     @relation(fields: [organizerId], references: [id])
+  rsvps       Rsvp[]
+  // Recurrence fields
+  recurrence  String   @default("none") // "none" | "daily" | "weekly" | "monthly"
+  recurrenceEndDate String? // ISO date string when recurrence ends (optional)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Gallery {
+  id          String   @id @default(cuid())
+  caption     String
+  category    String   @default("Umum")
+  imageUrl    String
+  uploaderId  String
+  uploader    User     @relation(fields: [uploaderId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Rsvp {
+  id        String   @id @default(cuid())
+  status    String   @default("hadir") // "hadir" | "mungkin" | "tidak"
+  userId    String
+  eventId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, eventId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  articleId String
+  userId    String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  type        String   // "follow" | "like" | "comment" | "rsvp" | "bookmark"
+  recipientId String
+  actorId     String?
+  articleId   String?
+  eventId     String?
+  content     String?
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  recipient   User     @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor       User?    @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([recipientId, read, createdAt])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  content     String
+  senderId    String
+  recipientId String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  sender      User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient   User     @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, read, createdAt])
+  @@index([senderId, recipientId, createdAt])
+}
+
+// Aspirasi Mahasiswa — anonymous (just name) feedback wall
+// Used for word cloud visualization
+model Aspirasi {
+  id          String   @id @default(cuid())
+  name        String   // nama pengirim (no login required, just name for tracking)
+  content     String   // isi aspirasi
+  category    String   @default("Umum") // Akademik | Fasilitas | Organisasi | Sosial | Umum
+  approved    Boolean  @default(true) // auto-approve; admin can hide via DELETE
+  createdAt   DateTime @default(now())
+
+  @@index([approved, createdAt])
+  @@index([category, approved])
+}
