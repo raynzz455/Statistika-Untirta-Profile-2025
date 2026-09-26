@@ -84,7 +84,7 @@ export function OpeningAnimation() {
               y1={g}
               x2="95"
               y2={g}
-              stroke="#1a1a1a"
+              stroke="var(--brand-ink)"
               strokeWidth="0.2"
               className="opacity-20 axes-line"
               style={{ animationDelay: '0s' }}
@@ -97,7 +97,7 @@ export function OpeningAnimation() {
               y1="5"
               x2={g}
               y2="95"
-              stroke="#1a1a1a"
+              stroke="var(--brand-ink)"
               strokeWidth="0.2"
               className="opacity-20 axes-line"
               style={{ animationDelay: '0s' }}
@@ -110,7 +110,7 @@ export function OpeningAnimation() {
             y1="95"
             x2="95"
             y2="95"
-            stroke="#1a1a1a"
+            stroke="var(--brand-ink)"
             strokeWidth="0.6"
             className="axes-line"
           />
@@ -119,7 +119,7 @@ export function OpeningAnimation() {
             y1="95"
             x2="5"
             y2="5"
-            stroke="#1a1a1a"
+            stroke="var(--brand-ink)"
             strokeWidth="0.6"
             className="axes-line"
           />
@@ -132,7 +132,7 @@ export function OpeningAnimation() {
             transform="rotate(-90 3 50)"
             fontSize="2"
             className="scatter-text"
-            fill="#1a1a1a"
+            fill="var(--brand-ink)"
             style={{ animationDelay: '2.5s' }}
           >
             VARIABEL Y
@@ -144,7 +144,7 @@ export function OpeningAnimation() {
             textAnchor="middle"
             fontSize="2"
             className="scatter-text"
-            fill="#1a1a1a"
+            fill="var(--brand-ink)"
             style={{ animationDelay: '2.5s' }}
           >
             VARIABEL X
@@ -169,7 +169,7 @@ export function OpeningAnimation() {
             y1="90"
             x2="90"
             y2="10"
-            stroke="#1a1a1a"
+            stroke="var(--brand-ink)"
             strokeWidth="0.8"
             strokeDasharray="120"
             strokeDashoffset="120"
@@ -181,7 +181,7 @@ export function OpeningAnimation() {
             cx="50"
             cy="50"
             r="2.5"
-            fill="#1a1a1a"
+            fill="var(--brand-ink)"
             className="scatter-dot"
             style={{ animationDelay: '2.4s' }}
           />
@@ -190,7 +190,7 @@ export function OpeningAnimation() {
             y="48"
             fontSize="2"
             className="scatter-text"
-            fill="#1a1a1a"
+            fill="var(--brand-ink)"
             style={{ animationDelay: '2.7s' }}
           >
             ȳ
