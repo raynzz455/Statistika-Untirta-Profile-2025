@@ -49,13 +49,18 @@ Panduan lengkap end-to-end untuk setup database, storage, dan auth dari awal hin
 | **service_role** key | `eyJhbGciOi...` (panjang, JWT) | **SERVER-ONLY**, bypass RLS |
 
 4. Buka tab **Database** (di sidebar kiri)
-5. Di section **Connection string**, pilih mode **Transaction** (pooler)
-6. Salin 2 URLs:
+5. Di section **Connection string**, pilih mode **Transaction** (pooler) — port 6543
 
-| Nama | Port | Format | Untuk apa |
-|------|------|--------|-----------|
-| **Connection pooling** (DATABASE_URL) | 6543 | `postgresql://postgres.[REF]:[PASS]@aws-0-[REGION].pooler.supabase.com:6543/postgres` | Untuk app runtime (Supavisor) |
-| **Direct connection** (DIRECT_URL) | 5432 | `postgresql://postgres.[REF]:[PASS]@aws-0-[REGION].supabase.com:5432/postgres` | Untuk migrations |
+> ⚠️ **CRITICAL — IPv6 Issue**: Supabase free tier direct connection (port 5432) is **IPv6-only** in some regions (including Southeast Asia Singapore). Many Indonesian ISPs don't support IPv6 → direct connections fail with "P1001: Can't reach database server".
+>
+> **Solution**: Use the POOLER URL (port 6543) for **BOTH** `DATABASE_URL` AND `DIRECT_URL`. The pooler supports IPv4 + IPv6 — always works.
+
+6. Salin 1 URL pooler (port 6543) saja — dipakai untuk kedua env vars:
+
+| Var | URL yang dipakai | Port | Untuk apa |
+|-----|------------------|------|-----------|
+| `DATABASE_URL` | **Connection pooling** (Transaction mode) | 6543 | App runtime + migrations (recommended) |
+| `DIRECT_URL` | **Connection pooling** (Transaction mode) — sama dengan atas | 6543 | Backup untuk migrations (default Prisma pakai directUrl) |
 
 > ⚠️ Ganti `[PASS]` dengan password yang Anda buat di Tahap 1.
 
@@ -81,7 +86,7 @@ Panduan lengkap end-to-end untuk setup database, storage, dan auth dari awal hin
    ```bash
    # 1. DATABASE (from Supabase → Project Settings → Database → Connection string)
    DATABASE_URL="postgresql://postgres.[REF]:[PASS]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
-   DIRECT_URL="postgresql://postgres.[REF]:[PASS]@aws-0-ap-southeast-1.supabase.com:5432/postgres"
+   DIRECT_URL="postgresql://postgres.[REF]:[PASS]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
 
    # 2. SESSION SECRET (generate new)
    SESSION_SECRET="REPLACE_WITH_32_PLUS_CHAR_RANDOM_HEX_STRING"
@@ -470,9 +475,34 @@ Untuk development tanpa Supabase (e.g. offline, no internet):
 ## Troubleshooting
 
 ### Error: "P1001: Can't reach database server"
-- Cek `DATABASE_URL` format → harus pakai **pooler URL** (port 6543)
+
+**Most common cause (90% of cases): IPv6 issue**
+
+Supabase free tier direct connection (port 5432) is IPv6-only in some regions (including Southeast Asia Singapore). Indonesian ISPs generally don't support IPv6 → connection fails.
+
+**Fix**: Set BOTH `DATABASE_URL` AND `DIRECT_URL` to the POOLER URL (port 6543). The pooler supports IPv4.
+
+```bash
+# Wrong (causes P1001 in Indonesia):
+DATABASE_URL="postgresql://...@db.PROJECT_REF.supabase.co:5432/postgres"
+DIRECT_URL="postgresql://...@db.PROJECT_REF.supabase.co:5432/postgres"
+
+# Correct (uses pooler, works in Indonesia):
+DATABASE_URL="postgresql://...@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+DIRECT_URL="postgresql://...@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+```
+
+**Other causes (if pooler URL also fails):**
 - Cek password di URL → encode URL special chars (e.g. `@` → `%40`)
-- Test koneksi langsung: `psql "[DATABASE_URL]"`
+- Cek project region (Dashboard → Settings → General). Kalau bukan Singapore, ganti `ap-southeast-1` di URL pooler
+- Test koneksi langsung:
+  ```bash
+  # Windows PowerShell
+  Test-NetConnection -ComputerName aws-0-ap-southeast-1.pooler.supabase.com -Port 6543
+  # Expected: TcpTestSucceeded: True
+  ```
+- Cek apakah project Supabase paused (free tier auto-pause after 1 week idle)
+  - Dashboard → Overview → kalau "Paused", klik "Restore project"
 
 ### Error: "P3009: Migration failed"
 - Reset database: `bun run db:reset` (WARNING: hapus semua data)
