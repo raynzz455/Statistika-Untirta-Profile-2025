@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { memoize } from '@/lib/cache'
 
 // Helper: extract a snippet around the first match of `q` in `text`
 function extractSnippet(text: string, q: string, length = 80): string | undefined {
@@ -26,111 +27,119 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ students: [], articles: [], events: [], gallery: [], users: [] })
   }
 
-  // Search across all content types in parallel
-  const [students, articles, events, gallery, users] = await Promise.all([
-    db.student.findMany({
-      where: {
-        OR: [
-          { name: { contains: q } },
-          { nim: { contains: q } },
-          { tagline: { contains: q } },
-          { bio: { contains: q } },
-          { instagram: { contains: q } },
-          { asalDaerah: { contains: q } },
-        ],
-      },
-      take: limit,
-      orderBy: { nim: 'asc' },
-    }),
-    db.article.findMany({
-      where: {
-        published: true,
-        OR: [
-          { title: { contains: q } },
-          { excerpt: { contains: q } },
-          { content: { contains: q } },
-          { author: { contains: q } },
-          { category: { contains: q } },
-        ],
-      },
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        tags: { include: { tag: true } },
-      },
-    }),
-    db.event.findMany({
-      where: {
-        OR: [
-          { title: { contains: q } },
-          { description: { contains: q } },
-          { location: { contains: q } },
-          { category: { contains: q } },
-        ],
-      },
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-    }),
-    db.gallery.findMany({
-      where: {
-        OR: [
-          { caption: { contains: q } },
-          { category: { contains: q } },
-        ],
-      },
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-    }),
-    // Also search users (for member profile navigation)
-    db.user.findMany({
-      where: {
-        OR: [
-          { username: { contains: q } },
-          { displayName: { contains: q } },
-        ],
-      },
-      take: limit,
-      select: { id: true, username: true, displayName: true, role: true },
-    }),
-  ])
+  // Search across all content types in parallel — memoized for 10s to reduce DB load
+  const { students, articles, events, gallery, users } = await memoize(
+    `search:${q}:${limit}`,
+    async () => {
+      const [students, articles, events, gallery, users] = await Promise.all([
+        db.student.findMany({
+          where: {
+            OR: [
+              { name: { contains: q } },
+              { nim: { contains: q } },
+              { tagline: { contains: q } },
+              { bio: { contains: q } },
+              { instagram: { contains: q } },
+              { asalDaerah: { contains: q } },
+            ],
+          },
+          take: limit,
+          orderBy: { nim: 'asc' },
+        }),
+        db.article.findMany({
+          where: {
+            published: true,
+            OR: [
+              { title: { contains: q } },
+              { excerpt: { contains: q } },
+              { content: { contains: q } },
+              { author: { contains: q } },
+              { category: { contains: q } },
+            ],
+          },
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            tags: { include: { tag: true } },
+          },
+        }),
+        db.event.findMany({
+          where: {
+            OR: [
+              { title: { contains: q } },
+              { description: { contains: q } },
+              { location: { contains: q } },
+              { category: { contains: q } },
+            ],
+          },
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+        }),
+        db.gallery.findMany({
+          where: {
+            OR: [
+              { caption: { contains: q } },
+              { category: { contains: q } },
+            ],
+          },
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+        }),
+        // Also search users (for member profile navigation)
+        db.user.findMany({
+          where: {
+            OR: [
+              { username: { contains: q } },
+              { displayName: { contains: q } },
+            ],
+          },
+          take: limit,
+          select: { id: true, username: true, displayName: true, role: true },
+        }),
+      ])
 
-  // Also search tags — find articles with matching tag names
-  const matchingTags = await db.tag.findMany({
-    where: { name: { contains: q } },
-    include: {
-      articles: {
+      // Also search tags — find articles with matching tag names
+      const matchingTags = await db.tag.findMany({
+        where: { name: { contains: q } },
         include: {
-          article: {
-            select: { id: true, title: true, excerpt: true, content: true, category: true, date: true, author: true, published: true },
+          articles: {
+            include: {
+              article: {
+                select: { id: true, title: true, excerpt: true, content: true, category: true, date: true, author: true, published: true },
+              },
+            },
           },
         },
-      },
-    },
-    take: 5,
-  })
+        take: 5,
+      })
 
-  // Add tag-matched articles to the articles list (dedup by id, only published)
-  const articleIds = new Set(articles.map((a) => a.id))
-  for (const tag of matchingTags) {
-    for (const at of tag.articles) {
-      if (at.article && at.article.published && !articleIds.has(at.article.id)) {
-        articleIds.add(at.article.id)
-        articles.push({
-          ...at.article,
-          imageUrl: null,
-          authorId: '',
-          authorUser: undefined as any,
-          comments: [],
-          likes: [],
-          bookmarks: [],
-          tags: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          excerpt: `[Tag: ${tag.name}] ${at.article.excerpt}`,
-        } as any)
+      // Add tag-matched articles to the articles list (dedup by id, only published)
+      const articleIds = new Set(articles.map((a) => a.id))
+      for (const tag of matchingTags) {
+        for (const at of tag.articles) {
+          if (at.article && at.article.published && !articleIds.has(at.article.id)) {
+            articleIds.add(at.article.id)
+            articles.push({
+              ...at.article,
+              imageUrl: null,
+              authorId: '',
+              authorUser: undefined as any,
+              comments: [],
+              likes: [],
+              bookmarks: [],
+              tags: [],
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              excerpt: `[Tag: ${tag.name}] ${at.article.excerpt}`,
+            } as any)
+          }
+        }
       }
-    }
-  }
+
+      return { students, articles, events, gallery, users }
+    },
+    10000
+  )
 
   return NextResponse.json({
     students: shouldInclude('student') ? students.map((s) => ({

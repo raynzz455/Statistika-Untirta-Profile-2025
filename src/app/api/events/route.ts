@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
+import { withCache, CachePresets } from '@/lib/cache'
 
 export async function GET() {
   const events = await db.event.findMany({ orderBy: { createdAt: 'desc' } })
-  return NextResponse.json({ events })
+  return withCache(NextResponse.json({ events }), CachePresets.publicList)
 }
 
 export async function POST(req: NextRequest) {

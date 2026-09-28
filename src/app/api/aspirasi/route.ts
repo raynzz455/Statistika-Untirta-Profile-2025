@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
+import { withCache, CachePresets } from '@/lib/cache'
 
 // Simple in-memory rate limit: per-name+IP, max 3 submissions per 10 minutes
 type RateBucket = { count: number; firstAt: number }
@@ -53,11 +54,14 @@ export async function GET(req: NextRequest) {
     _count: { _all: true },
   })
 
-  return NextResponse.json({
-    items,
-    stats: stats.map((s) => ({ category: s.category, count: s._count._all })),
-    total: items.length,
-  })
+  return withCache(
+    NextResponse.json({
+      items,
+      stats: stats.map((s) => ({ category: s.category, count: s._count._all })),
+      total: items.length,
+    }),
+    CachePresets.publicDynamic
+  )
 }
 
 // POST /api/aspirasi — submit new aspiration (no auth, just name)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
+import { withCache, CachePresets } from '@/lib/cache'
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url)
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
     },
     orderBy: { nim: 'asc' },
   })
-  return NextResponse.json({ students })
+  return withCache(NextResponse.json({ students }), CachePresets.publicList)
 }
 
 export async function POST(req: NextRequest) {

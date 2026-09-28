@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
+import { withCache, CachePresets } from '@/lib/cache'
 
 export async function GET() {
   const items = await db.gallery.findMany({ orderBy: { createdAt: 'desc' } })
-  return NextResponse.json({ items })
+  return withCache(NextResponse.json({ items }), CachePresets.publicStatic)
 }
 
 export async function POST(req: NextRequest) {

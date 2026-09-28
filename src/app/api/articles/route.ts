@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
+import { withCache, CachePresets } from '@/lib/cache'
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url)
@@ -36,12 +37,15 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: 'desc' },
     take: limit,
   })
-  return NextResponse.json({
-    articles: articles.map((a) => ({
-      ...a,
-      tags: a.tags.map((at) => ({ id: at.tag.id, name: at.tag.name, color: at.tag.color })),
-    })),
-  })
+  return withCache(
+    NextResponse.json({
+      articles: articles.map((a) => ({
+        ...a,
+        tags: a.tags.map((at) => ({ id: at.tag.id, name: at.tag.name, color: at.tag.color })),
+      })),
+    }),
+    CachePresets.publicList
+  )
 }
 
 export async function POST(req: NextRequest) {
