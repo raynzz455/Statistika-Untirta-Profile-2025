@@ -6,7 +6,7 @@ import { PlaceholderImage } from '@/components/PlaceholderImage'
 import { ImageUploader } from '@/components/ImageUploader'
 import { SavedArticles } from '@/components/SavedArticles'
 import { toast } from 'sonner'
-import { User as UserIcon, Save, Image as ImageIcon, UserCheck } from 'lucide-react'
+import { User as UserIcon, Save, Image as ImageIcon, UserCheck, Trash2, Music2, Youtube, Play } from 'lucide-react'
 
 export function SettingsView() {
   const user = useAppStore((s) => s.user)
@@ -18,6 +18,9 @@ export function SettingsView() {
     instagram: '',
     asalDaerah: '',
     imageUrl: '',
+    lagu: '',
+    laguArtis: '',
+    laguUrl: '',
   })
   const [saved, setSaved] = useState(false)
   const [studentId, setStudentId] = useState<string | null>(null)
@@ -42,6 +45,9 @@ export function SettingsView() {
             instagram: mine.instagram || '',
             asalDaerah: mine.asalDaerah || '',
             imageUrl: mine.imageUrl || '',
+            lagu: mine.lagu || '',
+            laguArtis: mine.laguArtis || '',
+            laguUrl: mine.laguUrl || '',
           })
         } else {
           setProfile((p) => ({ ...p, name: user.displayName || user.username }))
@@ -81,6 +87,9 @@ export function SettingsView() {
           instagram: profile.instagram,
           asalDaerah: profile.asalDaerah,
           imageUrl: profile.imageUrl || undefined,
+          lagu: profile.lagu || null,
+          laguArtis: profile.laguArtis || null,
+          laguUrl: profile.laguUrl || null,
         }),
       })
       const d = await res.json()
@@ -191,6 +200,90 @@ export function SettingsView() {
             className="w-full border border-[var(--brand-ink)] p-2.5 text-sm bg-[var(--brand-surface-2)]"
             placeholder="Serang, Banten"
           />
+        </div>
+
+        {/* === LAGU TEMA === */}
+        <div className="border-t border-[var(--brand-border)] pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-condensed uppercase font-bold text-[var(--brand-navy)]">
+              Lagu Tema
+            </h3>
+            {profile.laguUrl && (
+              <button
+                type="button"
+                onClick={() => setProfile({ ...profile, lagu: '', laguArtis: '', laguUrl: '' })}
+                className="text-[10px] font-condensed uppercase tracking-widest text-[var(--brand-orange)] hover:text-red-600 flex items-center gap-1"
+              >
+                <Trash2 className="w-3 h-3" /> Hapus Lagu
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="block text-[10px] font-condensed uppercase tracking-widest text-[var(--brand-ink-muted)] mb-1">
+                Judul Lagu
+              </label>
+              <input
+                type="text"
+                value={profile.lagu}
+                onChange={(e) => setProfile({ ...profile, lagu: e.target.value })}
+                className="w-full border-b-2 border-[var(--brand-border)] py-1.5 text-sm bg-transparent focus:outline-none focus:border-[var(--brand-navy)]"
+                placeholder="cth: Karnadi Anem Karnak"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-condensed uppercase tracking-widest text-[var(--brand-ink-muted)] mb-1">
+                Artis / Penyanyi
+              </label>
+              <input
+                type="text"
+                value={profile.laguArtis}
+                onChange={(e) => setProfile({ ...profile, laguArtis: e.target.value })}
+                className="w-full border-b-2 border-[var(--brand-border)] py-1.5 text-sm bg-transparent focus:outline-none focus:border-[var(--brand-navy)]"
+                placeholder="cth: NDX A.K.A."
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-condensed uppercase tracking-widest text-[var(--brand-ink-muted)] mb-1">
+              URL Lagu
+            </label>
+            <input
+              type="url"
+              value={profile.laguUrl}
+              onChange={(e) => setProfile({ ...profile, laguUrl: e.target.value })}
+              className="w-full border-b-2 border-[var(--brand-border)] py-1.5 text-sm font-mono bg-transparent focus:outline-none focus:border-[var(--brand-navy)]"
+              placeholder="https://..."
+            />
+            <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-[10px]">
+              <div className="border border-[var(--brand-border)] bg-[var(--brand-surface-2)] p-2">
+                <p className="font-condensed uppercase tracking-widest text-[#1DB954] mb-0.5 flex items-center gap-1">
+                  <Music2 className="w-3 h-3" /> Spotify
+                </p>
+                <p className="text-[9px] text-[var(--brand-ink-muted)] font-mono truncate">
+                  open.spotify.com/track/...
+                </p>
+              </div>
+              <div className="border border-[var(--brand-border)] bg-[var(--brand-surface-2)] p-2">
+                <p className="font-condensed uppercase tracking-widest text-[#FF0000] mb-0.5 flex items-center gap-1">
+                  <Youtube className="w-3 h-3" /> YouTube
+                </p>
+                <p className="text-[9px] text-[var(--brand-ink-muted)] font-mono truncate">
+                  youtu.be/... atau watch?v=...
+                </p>
+              </div>
+              <div className="border border-[var(--brand-border)] bg-[var(--brand-surface-2)] p-2">
+                <p className="font-condensed uppercase tracking-widest text-[var(--brand-navy)] mb-0.5 flex items-center gap-1">
+                  <Play className="w-3 h-3" /> File MP3
+                </p>
+                <p className="text-[9px] text-[var(--brand-ink-muted)] font-mono truncate">
+                  link langsung .mp3 / .ogg
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="border-t border-[var(--brand-ink)] pt-6 flex flex-col md:flex-row justify-between gap-2">
