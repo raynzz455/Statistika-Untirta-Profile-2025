@@ -510,7 +510,7 @@ export function ArticlesView() {
                     </div>
                     <div className="min-w-0">
                       <p className="font-condensed text-sm font-semibold tracking-wide truncate">{a.author}</p>
-                      <p className="font-sans text-[11px] text-[var(--brand-ink-muted)]">{a.date}</p>
+                      <p className="font-body text-[11px] text-[var(--brand-ink-muted)]">{a.date}</p>
                     </div>
                   </div>
                   <div className="flex gap-1 flex-shrink-0">

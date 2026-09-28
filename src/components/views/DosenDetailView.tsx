@@ -140,7 +140,7 @@ export function DosenDetailView() {
               {dosen.expertise && (
                 <div className="flex items-center gap-2">
                   <Award className="w-4 h-4 text-[var(--brand-orange)] flex-shrink-0" />
-                  <span className="text-sm font-sans text-[var(--brand-ink-muted)]">{dosen.expertise}</span>
+                  <span className="text-sm font-body text-[var(--brand-ink-muted)]">{dosen.expertise}</span>
                 </div>
               )}
               {dosen.bio && (

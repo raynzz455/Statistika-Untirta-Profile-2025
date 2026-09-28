@@ -110,7 +110,7 @@ export function UserManagement() {
           <h2 className="font-condensed text-3xl uppercase tracking-tight flex items-center gap-2">
             <Shield className="w-6 h-6 text-[var(--brand-maroon)]" /> Manajemen User
           </h2>
-          <p className="font-sans text-sm text-[var(--brand-ink-muted)] mt-1">
+          <p className="font-body text-sm text-[var(--brand-ink-muted)] mt-1">
             Kelola akun anggota: tambah user, ubah role (admin/user), reset password, atau hapus.
           </p>
         </div>
@@ -189,7 +189,7 @@ export function UserManagement() {
         <div className="text-center py-12 text-sm text-[var(--brand-ink-muted)]">Memuat daftar user...</div>
       ) : (
         <div className="overflow-x-auto border border-[var(--brand-ink)]">
-          <table className="w-full text-left text-sm font-sans">
+          <table className="w-full text-left text-sm font-body">
             <thead className="bg-[var(--brand-orange)]/15 font-condensed uppercase tracking-wider text-xs">
               <tr>
                 <th className="p-3 border-b border-[var(--brand-ink)]">Username</th>

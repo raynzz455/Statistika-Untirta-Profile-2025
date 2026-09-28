@@ -107,8 +107,8 @@ export function Header() {
             key={idx}
             className="flex-shrink-0 flex items-center gap-2 border-r border-[var(--brand-ink)]/20 pr-4 md:pr-6 last:border-0"
           >
-            <span className="font-sans text-sm md:text-base font-semibold text-[var(--brand-ink)]">{stat.label}</span>
-            <span className="bg-[var(--brand-navy)] text-[var(--brand-surface)] font-bold font-sans text-sm md:text-base px-2 py-0.5">
+            <span className="font-body text-sm md:text-base font-semibold text-[var(--brand-ink)]">{stat.label}</span>
+            <span className="bg-[var(--brand-navy)] text-[var(--brand-surface)] font-bold font-body text-sm md:text-base px-2 py-0.5">
               {stat.value}
             </span>
           </div>

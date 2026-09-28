@@ -117,7 +117,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
         .rich-text-wrapper .mdxeditor-content {
           min-height: 200px;
           padding: 12px 16px;
-          font-family: var(--font-sans);
+          font-family: var(--font-body);
           font-size: 14px;
           line-height: 1.6;
         }

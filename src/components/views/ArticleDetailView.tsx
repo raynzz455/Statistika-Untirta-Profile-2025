@@ -131,7 +131,7 @@ export function ArticleDetailView() {
             grayscale
           />
         </div>
-        <p className="font-sans text-[10px] text-right text-[var(--brand-ink-muted)] uppercase tracking-widest px-3 py-2 border-t border-[var(--brand-ink)] bg-[var(--brand-surface-2)]">
+        <p className="font-body text-[10px] text-right text-[var(--brand-ink-muted)] uppercase tracking-widest px-3 py-2 border-t border-[var(--brand-ink)] bg-[var(--brand-surface-2)]">
           Foto: Dokumentasi Humas
         </p>
       </div>
@@ -146,10 +146,10 @@ export function ArticleDetailView() {
               h1: ({ node, ...props }) => <h1 className="font-serif text-3xl font-bold mt-6 mb-3" {...props} />,
               h2: ({ node, ...props }) => <h2 className="font-serif text-2xl font-bold mt-5 mb-2" {...props} />,
               h3: ({ node, ...props }) => <h3 className="font-condensed text-xl uppercase tracking-wide font-bold mt-4 mb-2" {...props} />,
-              p: ({ node, ...props }) => <p className="font-sans text-base leading-relaxed text-[var(--brand-ink)] mb-4 first:drop-cap first:[&::first-letter]:font-serif first:[&::first-letter]:text-5xl first:[&::first-letter]:font-bold first:[&::first-letter]:float-left first:[&::first-letter]:leading-[0.85] first:[&::first-letter]:pr-2 first:[&::first-letter]:pt-1 first:[&::first-letter]:text-[var(--brand-maroon)]" {...props} />,
+              p: ({ node, ...props }) => <p className="font-body text-base leading-relaxed text-[var(--brand-ink)] mb-4 first:drop-cap first:[&::first-letter]:font-serif first:[&::first-letter]:text-5xl first:[&::first-letter]:font-bold first:[&::first-letter]:float-left first:[&::first-letter]:leading-[0.85] first:[&::first-letter]:pr-2 first:[&::first-letter]:pt-1 first:[&::first-letter]:text-[var(--brand-maroon)]" {...props} />,
               ul: ({ node, ...props }) => <ul className="list-disc pl-6 my-3 space-y-1" {...props} />,
               ol: ({ node, ...props }) => <ol className="list-decimal pl-6 my-3 space-y-1" {...props} />,
-              li: ({ node, ...props }) => <li className="font-sans text-base text-[var(--brand-ink)]" {...props} />,
+              li: ({ node, ...props }) => <li className="font-body text-base text-[var(--brand-ink)]" {...props} />,
               blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-[var(--brand-orange)] pl-4 my-4 italic text-[var(--brand-ink-muted)] font-serif text-lg" {...props} />,
               a: ({ node, ...props }) => <a className="text-[var(--brand-orange)] underline hover:no-underline" target="_blank" rel="noopener noreferrer" {...props} />,
               code: ({ node, className, children, ...props }) => {

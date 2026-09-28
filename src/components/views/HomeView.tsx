@@ -54,7 +54,7 @@ export function HomeView() {
                   {rest[0].title}
                 </h3>
               </button>
-              <p className="font-sans text-[12px] text-[var(--brand-ink-muted)] leading-relaxed mb-3 line-clamp-3">{rest[0].excerpt}</p>
+              <p className="font-body text-[12px] text-[var(--brand-ink-muted)] leading-relaxed mb-3 line-clamp-3">{rest[0].excerpt}</p>
               <button onClick={() => setView('article-detail', rest[0].id)} className="font-condensed text-[10px] uppercase tracking-widest text-[var(--brand-navy)] hover:text-[var(--brand-orange)] flex items-center gap-1">
                 BACA <ArrowRight className="w-3 h-3" />
               </button>
@@ -75,7 +75,7 @@ export function HomeView() {
                   <PlaceholderImage alt={rest[1].title} src={rest[1].imageUrl || undefined} grayscale />
                 </button>
               </div>
-              <p className="font-sans text-[11px] text-[var(--brand-ink-muted)] leading-relaxed line-clamp-2">{rest[1].excerpt}</p>
+              <p className="font-body text-[11px] text-[var(--brand-ink-muted)] leading-relaxed line-clamp-2">{rest[1].excerpt}</p>
             </div>
           )}
 
@@ -97,7 +97,7 @@ export function HomeView() {
             className="bg-[var(--brand-orange)] text-[var(--brand-surface)] p-4 flex flex-col items-start hover:brightness-95 transition-all group w-full border border-[var(--brand-navy)]"
           >
             <h4 className="font-serif italic text-xl leading-none mb-2 group-hover:text-[var(--brand-navy)] transition-colors">Aspirasi</h4>
-            <p className="font-sans text-[11px] leading-snug text-[var(--brand-surface)]/85 mb-2">
+            <p className="font-body text-[11px] leading-snug text-[var(--brand-surface)]/85 mb-2">
               Sampaikan suara, kritik, dan ide untuk angkatan. Tanpa login — cukup nama.
             </p>
             <div className="w-full border-t border-[var(--brand-surface)]/30 pt-1.5 flex justify-between items-center">
@@ -126,7 +126,7 @@ export function HomeView() {
                   {spotlight.title}
                 </h2>
               </button>
-              <p className="font-sans text-sm text-[var(--brand-ink-muted)] leading-relaxed mb-4">{spotlight.excerpt}</p>
+              <p className="font-body text-sm text-[var(--brand-ink-muted)] leading-relaxed mb-4">{spotlight.excerpt}</p>
               <div className="flex items-center justify-between border-t border-[var(--brand-border)] pt-2">
                 <p className="font-mono text-[10px] text-[var(--brand-ink-muted)]">{spotlight.author} • {spotlight.date}</p>
                 <button onClick={() => setView('article-detail', spotlight.id)} className="font-condensed text-[10px] uppercase tracking-widest text-[var(--brand-navy)] hover:text-[var(--brand-orange)] flex items-center gap-1">
@@ -176,7 +176,7 @@ export function HomeView() {
               <Calendar className="w-2.5 h-2.5" /> AGENDA TERBARU
             </p>
             <h4 className="font-condensed text-base uppercase tracking-wide leading-tight mb-1">Jadwal UTS Telah Rilis!</h4>
-            <p className="font-sans text-[11px] text-[var(--brand-surface)]/70 mb-2">Dimulai Senin, 28 Oktober</p>
+            <p className="font-body text-[11px] text-[var(--brand-surface)]/70 mb-2">Dimulai Senin, 28 Oktober</p>
             <span className="inline-block border border-[var(--brand-surface)]/30 px-2.5 py-1 font-condensed text-[9px] uppercase tracking-widest">
               LIHAT JADWAL →
             </span>
@@ -194,7 +194,7 @@ export function HomeView() {
                   onClick={() => setView('article-detail', a.id)}
                   className="block w-full text-left py-2 border-b border-[var(--brand-border)] last:border-0 hover:bg-[var(--brand-surface-2)] -mx-1 px-1 transition-colors"
                 >
-                  <h5 className="font-sans text-[12px] leading-tight hover:text-[var(--brand-navy)] transition-colors line-clamp-2 mb-0.5">{a.title}</h5>
+                  <h5 className="font-body text-[12px] leading-tight hover:text-[var(--brand-navy)] transition-colors line-clamp-2 mb-0.5">{a.title}</h5>
                   <p className="font-mono text-[9px] text-[var(--brand-ink-muted)]">{a.date}</p>
                 </button>
               ))}
@@ -204,12 +204,12 @@ export function HomeView() {
           {/* Newsletter */}
           <form onSubmit={subscribe} className="bg-[var(--brand-surface-2)] border border-[var(--brand-border)] p-3">
             <h4 className="font-condensed text-xs uppercase tracking-widest mb-0.5 text-[var(--brand-navy)]">Berlangganan</h4>
-            <p className="font-sans text-[10px] text-[var(--brand-ink-muted)] mb-2">Update via email.</p>
+            <p className="font-body text-[10px] text-[var(--brand-ink-muted)] mb-2">Update via email.</p>
             <input
               type="email"
               required
               placeholder="email@anda.com"
-              className="w-full border border-[var(--brand-border)] p-1.5 text-xs font-sans mb-2 focus:outline-none focus:border-[var(--brand-navy)] bg-[var(--brand-surface)]"
+              className="w-full border border-[var(--brand-border)] p-1.5 text-xs font-body mb-2 focus:outline-none focus:border-[var(--brand-navy)] bg-[var(--brand-surface)]"
             />
             <button
               type="submit"

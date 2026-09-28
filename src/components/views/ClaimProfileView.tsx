@@ -114,7 +114,7 @@ export function ClaimProfileView() {
           <p className="text-sm text-[var(--brand-ink-muted)] mb-1">
             Profil mahasiswa <strong>{claimedStudent.name}</strong> ({claimedStudent.nim})
             <br />
-            Kelas {claimedStudent.kelas} — {claimedStudent.nickname ? `"${claimedStudent.nickname}"` : 'tanpa nickname'}
+            Kelas {claimedStudent.kelas}, nickname: {claimedStudent.nickname ? `"${claimedStudent.nickname}"` : 'tanpa nickname'}
           </p>
           <p className="font-serif italic text-xs text-[var(--brand-ink-muted)] mb-4">
             Sekarang Anda bisa edit foto, bio, tagline, lagu tema, dan portofolio.

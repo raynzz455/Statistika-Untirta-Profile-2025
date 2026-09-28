@@ -85,7 +85,7 @@ export function LoginView() {
               <h1 className="font-serif text-2xl md:text-3xl leading-tight mb-3">
                 Selamat <span className="italic text-[var(--brand-navy)]">Datang</span> Kembali
               </h1>
-              <p className="font-sans text-sm text-[var(--brand-ink-muted)] leading-relaxed mb-6">
+              <p className="font-body text-sm text-[var(--brand-ink-muted)] leading-relaxed mb-6">
                 Masuk untuk mengelola profil, menulis artikel, membuat event, dan berkolaborasi
                 membangun profil angkatan.
               </p>
@@ -117,7 +117,7 @@ export function LoginView() {
           {/* Right: form */}
           <div className="md:col-span-3 p-6 md:p-8 flex flex-col">
             {error && (
-              <div className="bg-[var(--brand-maroon)]/10 text-[var(--brand-ink)] text-xs p-3 font-sans border-l-4 border-[var(--brand-maroon)] mb-4 flex items-start gap-2">
+              <div className="bg-[var(--brand-maroon)]/10 text-[var(--brand-ink)] text-xs p-3 font-body border-l-4 border-[var(--brand-maroon)] mb-4 flex items-start gap-2">
                 <span className="text-[var(--brand-maroon)] font-bold">⚠</span> {error}
               </div>
             )}

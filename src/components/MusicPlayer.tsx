@@ -134,7 +134,7 @@ export function MusicPlayer({ songTitle, artist, audioUrl, variant = 'compact' }
           )}
         </button>
         <div className="flex-grow min-w-0">
-          <p className="text-[9px] font-sans font-semibold leading-tight truncate" title={songTitle || ''}>
+          <p className="text-[9px] font-body font-semibold leading-tight truncate" title={songTitle || ''}>
             {songTitle || 'Unknown'}
           </p>
           <p className="text-[8px] text-[var(--brand-ink-muted)] leading-tight truncate">

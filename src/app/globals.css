@@ -6,7 +6,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-body: var(--font-body);
   --font-serif: var(--font-serif);
   --font-condensed: var(--font-condensed);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -133,7 +133,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-sans), Georgia, serif;
+    font-family: var(--font-body), Georgia, serif;
     background-color: var(--brand-bg);
     color: var(--brand-ink);
     transition: background-color 0.4s ease, color 0.4s ease;
@@ -154,7 +154,7 @@
     text-transform: uppercase;
     font-weight: 400;
   }
-  .font-sans { font-family: var(--font-sans), Georgia, serif; }
+  .font-body { font-family: var(--font-body), Georgia, serif; }
   .font-mono { font-family: var(--font-mono), monospace; }
 
   /* Anti-AI-slop: intentional typographic details */

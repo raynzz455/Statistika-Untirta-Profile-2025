@@ -98,14 +98,14 @@ export function SettingsView() {
     <div className="max-w-2xl mx-auto my-8 page-enter">
       <div className="mb-8 pb-4 border-b border-[var(--brand-ink)]">
         <h1 className="font-condensed text-4xl uppercase tracking-tight">Pengaturan Profil</h1>
-        <p className="font-sans text-sm text-[var(--brand-ink-muted)] mt-1">
+        <p className="font-body text-sm text-[var(--brand-ink-muted)] mt-1">
           Perbarui informasi yang akan tampil di halaman direktori. Akun: <strong>{user.username}</strong> ({user.role}).
         </p>
       </div>
 
       <form onSubmit={handleSave} className="bg-[var(--brand-surface)] border border-[var(--brand-ink)] p-6 md:p-10 shadow-hard flex flex-col gap-6">
         {saved && (
-          <div className="bg-[var(--brand-navy)]/15 text-[var(--brand-ink)] border border-[var(--brand-ink)] p-3 text-sm font-bold font-sans flex items-center gap-2">
+          <div className="bg-[var(--brand-navy)]/15 text-[var(--brand-ink)] border border-[var(--brand-ink)] p-3 text-sm font-bold font-body flex items-center gap-2">
             <Save className="w-4 h-4" /> Profil berhasil diperbarui!
           </div>
         )}

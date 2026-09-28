@@ -192,7 +192,7 @@ export function AdminView() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 pb-4 border-b border-[var(--brand-ink)] gap-4">
         <div>
           <h1 className="font-condensed text-4xl uppercase tracking-tight">Admin Dashboard</h1>
-          <p className="font-sans text-sm text-[var(--brand-ink-muted)] mt-1">
+          <p className="font-body text-sm text-[var(--brand-ink-muted)] mt-1">
             Kelola direktori mahasiswa, artikel, event, dan pengaturan website.
           </p>
         </div>
@@ -494,7 +494,7 @@ export function AdminView() {
           )}
 
           <div className="overflow-x-auto border border-[var(--brand-ink)] max-h-[600px] overflow-y-auto custom-scroll">
-            <table className="w-full text-left text-sm font-sans">
+            <table className="w-full text-left text-sm font-body">
               <thead className="bg-[var(--brand-orange)]/15 font-condensed uppercase tracking-wider text-xs sticky top-0 z-10">
                 <tr>
                   <th className="p-3 border-b border-[var(--brand-ink)] w-10">
@@ -590,7 +590,7 @@ export function AdminView() {
               </tbody>
             </table>
           </div>
-          <p className="text-[10px] text-[var(--brand-ink-muted)] mt-2 font-sans">
+          <p className="text-[10px] text-[var(--brand-ink-muted)] mt-2 font-body">
             Total {students.length} mahasiswa terdaftar di direktori.
             {selectedIds.length > 0 && ` • ${selectedIds.length} dipilih`}
           </p>

@@ -27,7 +27,7 @@ export function Footer() {
             <h3 className="font-condensed text-2xl md:text-3xl uppercase tracking-wide font-bold mb-1">
               Berlangganan <span className="text-[var(--brand-orange)]">Info Angkatan</span>
             </h3>
-            <p className="font-sans text-sm text-white/70">
+            <p className="font-body text-sm text-white/70">
               Dapatkan pengumuman, jadwal UTS, dan info event langsung ke email Anda.
             </p>
           </div>
@@ -63,11 +63,11 @@ export function Footer() {
               <h4 className="font-condensed text-xl uppercase tracking-tight leading-none mb-1">
                 Statistika <span className="text-[var(--brand-orange)]">'25</span>
               </h4>
-              <p className="font-sans text-xs text-[var(--brand-ink-muted)]">Profil Angkatan Universitas Sultan Ageng Tirtayasa</p>
+              <p className="font-body text-xs text-[var(--brand-ink-muted)]">Profil Angkatan Universitas Sultan Ageng Tirtayasa</p>
             </div>
           </div>
           <p className="font-serif italic text-sm text-[var(--brand-ink-muted)] mb-4 max-w-md">
-            "Data • Analisis • Probabilitas — bersama mengukir jejak angkatan 2025 di kampus Cilegon."
+            "Data • Analisis • Probabilitas. Bersama mengukir jejak angkatan 2025 di kampus Cilegon."
           </p>
           <div className="flex items-center gap-3 text-xs text-[var(--brand-ink-muted)]">
             <MapPin className="w-4 h-4" />
@@ -91,7 +91,7 @@ export function Footer() {
               <li key={link.v}>
                 <button
                   onClick={() => setView(link.v)}
-                  className="font-sans text-[var(--brand-ink-muted)] hover:text-[var(--brand-ink)] hover:underline transition-colors"
+                  className="font-body text-[var(--brand-ink-muted)] hover:text-[var(--brand-ink)] hover:underline transition-colors"
                 >
                   {link.label}
                 </button>
@@ -123,7 +123,7 @@ export function Footer() {
 
       {/* Bottom bar */}
       <div className="border-t border-[var(--brand-border)] py-4 px-4 md:px-8 flex flex-col md:flex-row justify-between items-center gap-2 text-xs text-[var(--brand-ink-muted)]">
-        <p className="font-sans">
+        <p className="font-body">
           © {new Date().getFullYear()} Statistika '25 Untirta. Dibuat dengan dedikasi angkatan.
         </p>
         <p className="font-condensed uppercase tracking-widest text-[10px]">

@@ -5,19 +5,21 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
-// Retro font system — clean bold, anti-AI-slop:
-// - Playfair Display: high-contrast serif for headlines (broadsheet masthead feel)
-//   Used at weight 700 for big titles — bold but NOT ultra-heavy (clean)
-// - Bebas Neue: ultra-condensed uppercase for nav/labels (retro poster feel)
-//   Single weight 400 — natural weight, no forced bold (keeps it clean)
-// - Lora: readable serif for body text (newspaper column feel)
-// - IBM Plex Mono: typewriter monospace for dates/metadata (retro archival)
+// Retro font system: clean bold, anti-AI-slop.
+// See DESIGN.md for full design system documentation.
 //
-// Anti-AI-slop principles:
-// 1. No forced bold on condensed fonts — Bebas Neue at natural 400 is clean
-// 2. Consistent letter-spacing on labels instead of heavy weight
-// 3. Headlines use Playfair 700 (not 900) for "clean bold" not "ultra-bold"
-// 4. Body text uses Lora with generous line-height (1.7) for readability
+// Fonts (4 families, editorial newspaper aesthetic):
+//   Playfair Display  : headlines, weight 700 (NOT 900)
+//   Bebas Neue        : nav/labels, weight 400 only (no forced bold)
+//   Lora              : body text, weight 400-700 (SERIF, not sans)
+//   IBM Plex Mono     : metadata/dates, weight 400-600
+//
+// Anti-AI-slop principles (see DESIGN.md):
+//   1. No forced bold on condensed fonts (Bebas Neue at 400 is clean)
+//   2. Letter-spacing on labels instead of heavy weight
+//   3. Headlines use weight 700, not 900 (clean bold, not ultra-heavy)
+//   4. No em dash in user-facing text (use colon, comma, or parentheses)
+//   5. No Inter/Roboto/Arial/Helvetica (all fonts are distinctive)
 
 const playfair = Playfair_Display({
   variable: "--font-serif",
@@ -34,8 +36,10 @@ const bebas = Bebas_Neue({
   weight: "400",
 });
 
+// Lora is a SERIF font used for body text. Variable named --font-body
+// (not --font-body) to avoid confusion: this is NOT a sans-serif font.
 const lora = Lora({
-  variable: "--font-sans",
+  variable: "--font-body",
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500", "600", "700"],
@@ -50,7 +54,7 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Statistika '25 — Profil Angkatan Untirta",
+  title: "Statistika '25: Profil Angkatan Untirta",
   description:
     "Website resmi profil angkatan Statistika 2025 Universitas Sultan Ageng Tirtayasa. Direktori mahasiswa, kelas, galeri, artikel, dan event angkatan.",
   keywords: [
@@ -67,7 +71,7 @@ export const metadata: Metadata = {
     icon: "/logo.svg",
   },
   openGraph: {
-    title: "Statistika '25 — Profil Angkatan Untirta",
+    title: "Statistika '25: Profil Angkatan Untirta",
     description:
       "Direktori mahasiswa, kelas, galeri, artikel, dan event angkatan Statistika Untirta.",
     siteName: "Statistika '25",

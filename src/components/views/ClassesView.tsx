@@ -97,7 +97,7 @@ function ClassBlock({ kelas, students }: { kelas: 'A' | 'B'; students: Student[]
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={`Cari di Kelas ${kelas}...`}
-            className="w-full border border-[var(--brand-border)] pl-7 pr-7 py-1 text-xs font-sans bg-[var(--brand-surface)] focus:outline-none focus:border-[var(--brand-navy)]"
+            className="w-full border border-[var(--brand-border)] pl-7 pr-7 py-1 text-xs font-body bg-[var(--brand-surface)] focus:outline-none focus:border-[var(--brand-navy)]"
           />
           {search && (
             <button
@@ -143,7 +143,7 @@ function ClassBlock({ kelas, students }: { kelas: 'A' | 'B'; students: Student[]
                     </div>
                   </td>
                   <td className="p-2">
-                    <p className="font-sans text-sm font-semibold group-hover:text-[var(--brand-navy)] transition-colors truncate">{s.name}</p>
+                    <p className="font-body text-sm font-semibold group-hover:text-[var(--brand-navy)] transition-colors truncate">{s.name}</p>
                     <p className="text-[9px] text-[var(--brand-ink-muted)] font-mono sm:hidden">{s.nim}</p>
                   </td>
                   <td className="p-2 hidden sm:table-cell">
@@ -284,7 +284,7 @@ export function ClassesView() {
       {(activeSemester === '3' || activeSemester === '5') && (
         <div className="mb-4 border-l-4 border-[var(--brand-orange)] bg-[var(--brand-orange)]/10 p-3 flex items-center gap-2 text-sm">
           <RefreshCw className="w-4 h-4 text-[var(--brand-orange)] flex-shrink-0" />
-          <span className="font-sans text-[var(--brand-ink-muted)]">
+          <span className="font-body text-[var(--brand-ink-muted)]">
             Rotasi kelas pada Semester {activeSemester} — mahasiswa Kelas A berpindah ke B dan sebaliknya.
           </span>
         </div>
@@ -296,7 +296,7 @@ export function ClassesView() {
           <Users className="w-4 h-4 text-[var(--brand-navy)] flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-condensed uppercase tracking-widest text-[var(--brand-navy)] mb-1">Kelas Besar</p>
-            <p className="font-sans text-[var(--brand-ink-muted)] leading-relaxed">
+            <p className="font-body text-[var(--brand-ink-muted)] leading-relaxed">
               Kelas dengan 20+ anggota ditampilkan 12 per halaman. Gunakan kolom pencarian di tiap kelas untuk menemukan mahasiswa spesifik berdasarkan nama atau NIM.
             </p>
           </div>
@@ -328,7 +328,7 @@ export function ClassesView() {
 
       {/* Archive */}
       <div className="mt-10 border-t border-dashed border-[var(--brand-border)] pt-6 text-center">
-        <p className="font-sans italic text-sm text-[var(--brand-ink-muted)]">
+        <p className="font-body italic text-sm text-[var(--brand-ink-muted)]">
           Rotasi pertama akan dilakukan setelah Semester 2.
         </p>
       </div>

@@ -91,7 +91,7 @@ export function AdminAnalytics() {
       <h2 className="font-condensed text-3xl uppercase tracking-tight flex items-center gap-2 mb-2">
         <BarChart3 className="w-6 h-6 text-[var(--brand-orange)]" /> Analytics & Insights
       </h2>
-      <p className="font-sans text-sm text-[var(--brand-ink-muted)] mb-6">
+      <p className="font-body text-sm text-[var(--brand-ink-muted)] mb-6">
         Ringkasan aktivitas konten dan engagement angkatan.
       </p>
 
