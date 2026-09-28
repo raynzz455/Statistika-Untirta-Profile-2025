@@ -1,28 +1,39 @@
 // Prisma schema for Statistika '25 website
 //
-// Database provider: configurable
-//   - Local dev (default): SQLite
-//   - Production / Supabase: PostgreSQL
+// Database provider: PostgreSQL (Supabase production)
 //
-// To switch to Supabase PostgreSQL:
-//   1. Update DATABASE_URL in .env with Supabase pooler URL
-//   2. Set DIRECT_URL with Supabase direct connection (for migrations)
-//   3. Uncomment `directUrl` below
-//   4. Change `provider = "sqlite"` → `provider = "postgresql"`
-//   5. Run: bun run db:push && bun run db:seed
-//   6. Run RLS policies: see supabase/rls-policies.sql (via Supabase SQL Editor)
-//   7. See SUPABASE_SETUP.md for full migration guide
+// Setup status: PRODUCTION-READY
+// This schema is configured for Supabase PostgreSQL.
+// For local dev without Supabase, see SETUP_RUNBOOK.md "Local SQLite mode".
+//
+// Configuration:
+//   - provider = "postgresql" — uses Supabase PostgreSQL pooler (port 6543)
+//   - url = DATABASE_URL — pooler URL (Supavisor, transaction mode)
+//   - directUrl = DIRECT_URL — direct URL (port 5432, for migrations)
+//
+// To run setup:
+//   1. Fill .env with Supabase credentials (see SETUP_RUNBOOK.md)
+//   2. Run: bash scripts/setup.sh
+//   3. Run SQL files in Supabase SQL Editor (auto-printed by setup.sh)
+//
+// For local dev (SQLite, no Supabase):
+//   1. Comment the postgresql config below, uncomment the sqlite block
+//   2. Set DATABASE_URL="file:./db/custom.db" in .env
+//   3. Run: bun run db:push && bun run db:seed
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  // ★ For Supabase, change "sqlite" → "postgresql"
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
-  // ★ When using Supabase connection pooler, uncomment to set directUrl for migrations
-  // directUrl = env("DIRECT_URL")
+  // === PRODUCTION (Supabase PostgreSQL) ===
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+
+  // === LOCAL DEV (SQLite, uncomment to use) ===
+  // provider = "sqlite"
+  // url      = env("DATABASE_URL")
 }
 
 model User {
