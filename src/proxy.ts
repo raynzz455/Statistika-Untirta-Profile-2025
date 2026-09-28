@@ -1,13 +1,19 @@
 // ============================================================================
-// Next.js Middleware — Supabase Auth Session Refresh
+// Next.js Proxy — Supabase Auth Session Refresh
 // ============================================================================
-// This middleware runs on every request and refreshes the Supabase Auth
-// session token if it's expired. Required for proper Supabase Auth
-// integration with Next.js App Router.
+// This proxy (formerly called "middleware" in Next.js 15 and earlier) runs
+// on every request and refreshes the Supabase Auth session token if it's
+// expired. Required for proper Supabase Auth integration with Next.js
+// App Router.
+//
+// In Next.js 16+:
+//   - File: src/proxy.ts (was: src/middleware.ts)
+//   - Exported function: `proxy` (was: `middleware`)
 //
 // Reference: https://supabase.com/docs/guides/auth/server-side/nextjs
+//            https://next.js.org/docs/messages/middleware-to-proxy
 //
-// IMPORTANT: This middleware is OPT-IN. It only activates when
+// IMPORTANT: This proxy is OPT-IN. It only activates when
 // NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set.
 // Otherwise, it passes through to the next handler (allowing the custom
 // cookie-based session in src/lib/session.ts to work for local dev).
@@ -19,7 +25,7 @@ import { createServerClient } from '@supabase/ssr'
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
 
-// Routes that don't require middleware processing
+// Routes that don't require proxy processing
 const PUBLIC_PATHS = [
   '/api/auth/login',
   '/api/auth/logout',
@@ -31,8 +37,10 @@ function isSupabaseConfigured(): boolean {
   return !!(SUPABASE_URL && SUPABASE_ANON_KEY)
 }
 
-export async function middleware(req: NextRequest) {
-  // Skip middleware entirely if Supabase not configured (local dev mode)
+// ⚠️ Function name MUST be `proxy` (not `middleware`) in Next.js 16+.
+// See: https://next.js.org/docs/messages/middleware-to-proxy
+export async function proxy(req: NextRequest) {
+  // Skip proxy entirely if Supabase not configured (local dev mode)
   if (!isSupabaseConfigured()) {
     return NextResponse.next()
   }
