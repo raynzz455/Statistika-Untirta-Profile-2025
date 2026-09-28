@@ -4,7 +4,14 @@ import { getSession } from '@/lib/session'
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
-  const student = await db.student.findUnique({ where: { id } })
+  const student = await db.student.findUnique({
+    where: { id },
+    include: {
+      portfolios: {
+        orderBy: [{ type: 'asc' }, { order: 'asc' }, { createdAt: 'desc' }],
+      },
+    },
+  })
   if (!student) return NextResponse.json({ error: 'Mahasiswa tidak ditemukan.' }, { status: 404 })
   return NextResponse.json({ student })
 }
@@ -41,6 +48,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       ...(body.laguArtis !== undefined ? { laguArtis: body.laguArtis ? String(body.laguArtis) : null } : {}),
       ...(body.laguUrl !== undefined ? { laguUrl: body.laguUrl ? String(body.laguUrl) : null } : {}),
     },
+    include: { portfolios: { orderBy: [{ type: 'asc' }, { order: 'asc' }] } },
   })
   return NextResponse.json({ student: updated })
 }

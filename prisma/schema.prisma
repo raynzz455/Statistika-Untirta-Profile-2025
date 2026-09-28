@@ -77,6 +77,32 @@ model Student {
   lagu        String?  // song title
   laguArtis   String?  // artist name
   laguUrl     String?  // audio URL (mp3/ogg/etc)
+
+  // Portfolio items (websites, projects, certificates)
+  portfolios  StudentPortfolio[]
+}
+
+// Student Portfolio — supports 3 types:
+//   - website: personal/blog/portfolio website
+//   - project: program kerja (proker), research project, competition, dll
+//   - certificate: professional/academic certifications
+model StudentPortfolio {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  type        String   // "website" | "project" | "certificate"
+  title       String   // project name, website name, cert title
+  description String?  // short description (1-2 sentences)
+  url         String?  // website URL, project repo, cert verify URL
+  imageUrl    String?  // thumbnail/logo/screenshot/cert image
+  issuer      String?  // for certificates: who issued it (e.g. "Google", "BNSP")
+  date        String?  // ISO date string for display (e.g. "2024-08-15")
+  order       Int      @default(0) // for sorting within type
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([studentId, type, order])
+  @@index([type, studentId])
 }
 
 model Article {

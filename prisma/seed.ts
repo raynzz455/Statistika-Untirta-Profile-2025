@@ -282,6 +282,143 @@ async function main() {
     }
   }
 
+  // --- Enhanced Student Bios (auto-biography style) ---
+  // Update first 4 students with longer biographies for richer profile pages
+  const enhancedBios: Record<string, string> = {
+    'Ahmad Fauzi': `Lahir di Cilegon dan besar di lingkungan industri yang penuh data. Sejak SMA, saya tertarik dengan angka dan pola — yang membawa saya ke Program Studi Statistika Untirta.
+
+Saya aktif di HIMASTA sebagai staff penelitian, fokus pada riset data sosial dan analisis tren Pendidikan. Di luar kampus, saya senang belajar machine learning via kursus online dan berbagi ilmu lewat blog pribadi.
+
+Target saya: jadi data scientist yang memanfaatkan statistika untuk dampak sosial di Banten.`,
+    'Budi Santoso': `Anak pertama dari keluarga petani sayur di Pandeglang. Saya belajar disiplin dari kebun — angka tidak pernah berbohong, dan data tidak pernah tidur.
+
+Saya tertarik dengan biostatistika dan kesehatan masyarakat. Selain kuliah, saya menjadi asisten laboratorium untuk mata kuliah Analisis Regresi. Saya juga mengikuti pelatihan sertifikasi data analyst.
+
+Motto hidup: "Kerja keras beat bakat, tapi kerja cerdas beat keduanya."`,
+    'Citra Lestari': `Lahir di Serang, perempuan tertua dari tiga bersaudara. Saya menyukai matematika sejak SD dan memilih Statistika karena ingin memahami dunia lewat data.
+
+Saya aktif sebagai Content Creator di media sosial angkatan, mengelola konten edukasi seputar statistika dan kehidupan kampus. Target saya jadi computational statistician yang kontribusi ke riset kesehatan reproduksi.`,
+    'Diana Putri': `Berasal dari keluarga sederhana di Tangerang. Saya tertarik dengan statistika terapan untuk bisnis dan ekonomi.
+
+Saya mengikuti organisasi BEM FT sebagai staff Humas, sekaligus mengerjakan proyek riset tentang perilaku konsumen milenial di Cilegon. Target saya: menjadi business analyst untuk perusahaan tech di Indonesia.`,
+  }
+
+  for (const [name, bio] of Object.entries(enhancedBios)) {
+    await db.student.updateMany({
+      where: { name },
+      data: { bio },
+    })
+  }
+
+  // --- Sample Portfolio Items for first 4 students ---
+  const studentsWithBio = await db.student.findMany({
+    where: { name: { in: Object.keys(enhancedBios) } },
+    select: { id: true, name: true },
+  })
+
+  const portfolioData: { studentName: string; type: 'website' | 'project' | 'certificate'; title: string; description?: string; url?: string; imageUrl?: string; issuer?: string; date?: string; order: number }[] = [
+    // === Ahmad Fauzi ===
+    {
+      studentName: 'Ahmad Fauzi', type: 'website', title: 'Personal Blog — Statistik & Data',
+      description: 'Blog pribadi berisi artikel statistika terapan, tutorial R/Python, dan catatan kuliah.',
+      url: 'https://ahmadfauzi.vercel.app', imageUrl: '', date: '2024-08', order: 1,
+    },
+    {
+      studentName: 'Ahmad Fauzi', type: 'project', title: 'HIMASTA Research — Analisis Tren Pendidikan Banten',
+      description: 'Proyek riset bersama dosen pembimbing. Menganalisis 5 tahun data Ujian Nasional + IPM Banten.',
+      url: 'https://github.com/ahmadfauzi/research-banten', date: '2024-11', order: 1,
+    },
+    {
+      studentName: 'Ahmad Fauzi', type: 'certificate', title: 'Google Data Analytics Professional Certificate',
+      description: '8 kursusCoursera tentang data analysis, visualization, dan R programming.',
+      url: 'https://coursera.org/verify/SPECIALIZATION', issuer: 'Google · Coursera',
+      date: '2024-09', order: 1,
+    },
+    {
+      studentName: 'Ahmad Fauzi', type: 'certificate', title: 'Dasar Pemrograman Python — Dicoding',
+      description: 'Sertifikasi fundamental Python untuk pemrosesan data.',
+      url: 'https://dicoding.com/certificates/EXAMPLE', issuer: 'Dicoding Indonesia',
+      date: '2024-05', order: 2,
+    },
+
+    // === Budi Santoso ===
+    {
+      studentName: 'Budi Santoso', type: 'project', title: 'Asisten Lab Analisis Regresi',
+      description: 'Membantu dosen mengajar praktikum Analisis Regresi. Membuat modul + koreksi tugas 80+ mahasiswa.',
+      date: '2024-10', order: 1,
+    },
+    {
+      studentName: 'Budi Santoso', type: 'certificate', title: 'BNSP Junior Data Analyst',
+      description: 'Sertifikasi nasional BNSP untuk Junior Data Analyst level 1.',
+      url: 'https://bnsp.go.id/verify/EXAMPLE', issuer: 'BNSP (Badan Nasional Sertifikasi Profesi)',
+      date: '2024-07', order: 1,
+    },
+    {
+      studentName: 'Budi Santoso', type: 'project', title: 'Riset Biostatistika — Faktor Risiko DBD',
+      description: 'Penelitian tentang distribusi Demam Berdarah di Cilegon dengan regresi Poisson.',
+      date: '2024-12', order: 2,
+    },
+
+    // === Citra Lestari ===
+    {
+      studentName: 'Citra Lestari', type: 'website', title: 'Statistika 101 — Instagram Edukasi',
+      description: 'Akun Instagram edukasi statistika dengan 2.000+ followers. Konten carousel & reels.',
+      url: 'https://instagram.com/statistika101', date: '2024-06', order: 1,
+    },
+    {
+      studentName: 'Citra Lestari', type: 'project', title: 'BEM FT — Staff Humas Angkatan',
+      description: 'Mengelola konten media sosial BEM FT, mengadakan event sharing antar-angkatan tiap bulan.',
+      date: '2024-08', order: 1,
+    },
+    {
+      studentName: 'Citra Lestari', type: 'certificate', title: 'MongoDB Atlas Developer',
+      description: 'Sertifikasi developer MongoDB untuk database NoSQL.',
+      url: 'https://university.mongodb.com/verify/EXAMPLE', issuer: 'MongoDB University',
+      date: '2024-10', order: 1,
+    },
+
+    // === Diana Putri ===
+    {
+      studentName: 'Diana Putri', type: 'project', title: 'Market Research — Konsumen Milenial Cilegon',
+      description: 'Survei 200+ responden + analisis cluster. Disusun untuk proyek mata kuliah Statistika Sosial.',
+      date: '2024-11', order: 1,
+    },
+    {
+      studentName: 'Diana Putri', type: 'certificate', title: 'Google Project Management Certificate',
+      description: '6 kursus tentang project management, agile, Scrum, dan leadership.',
+      url: 'https://coursera.org/verify/PROFESSIONAL', issuer: 'Google · Coursera',
+      date: '2024-04', order: 1,
+    },
+    {
+      studentName: 'Diana Putri', type: 'website', title: 'Portfolio — Diana Putri',
+      description: 'Website portofolio berisi project, CV, dan kontak. Dibangun dengan Next.js + Tailwind.',
+      url: 'https://dianaputri.vercel.app', date: '2024-12', order: 1,
+    },
+  ]
+
+  for (const p of portfolioData) {
+    const student = studentsWithBio.find((s) => s.name === p.studentName)
+    if (!student) continue
+    const existing = await db.studentPortfolio.findFirst({
+      where: { studentId: student.id, title: p.title },
+    })
+    if (!existing) {
+      await db.studentPortfolio.create({
+        data: {
+          studentId: student.id,
+          type: p.type,
+          title: p.title,
+          description: p.description ?? null,
+          url: p.url ?? null,
+          imageUrl: p.imageUrl ?? null,
+          issuer: p.issuer ?? null,
+          date: p.date ?? null,
+          order: p.order,
+        },
+      })
+    }
+  }
+
   console.log('Seed complete.')
   console.log('Test credentials:')
   console.log('  Admin: username=admin, password=admin')
