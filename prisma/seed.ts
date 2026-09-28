@@ -200,6 +200,50 @@ async function main() {
     }
   }
 
+  // --- Dosen (3 sample dosen, including Kaprodi) ---
+  const dosenData = [
+    {
+      name: 'Dr. Budi Santoso, M.Si.',
+      title: 'Dr., M.Si.',
+      role: 'Kaprodi',
+      expertise: 'Statistika Matematika, Distribusi Probabilitas',
+      bio: 'Ketua Program Studi Statistika Untirta sejak 2023. Dosen pengajar mata kuliah Statistika Matematika, Teori Peluang, dan Distribusi Probabilitas. Berkomitmen untuk mengembangkan riset statistika terapan di lingkungan kampus Cilegon.',
+      email: 'budi.santoso@untirta.ac.id',
+      imageUrl: '',
+      courses: 'Statistika Matematika, Teori Peluang, Distribusi Probabilitas',
+      order: 1,
+    },
+    {
+      name: 'Dr. Siti Rahayu, M.Si.',
+      title: 'Dr., M.Si.',
+      role: 'Dosen',
+      expertise: 'Biostatistika, Analisis Data Kesehatan',
+      bio: 'Dosen senior bidang Biostatistika. Berpengalaman lebih dari 15 tahun dalam riset kesehatan masyarakat. Pembimbing tugas akhir mahasiswa yang tertarik di bidang epidemiologi dan analisis data kesehatan.',
+      email: 'siti.rahayu@untirta.ac.id',
+      imageUrl: '',
+      courses: 'Biostatistik, Analisis Regresi, Riset Operasi',
+      order: 2,
+    },
+    {
+      name: 'Prof. Ahmad Hidayat, Ph.D.',
+      title: 'Prof., Ph.D.',
+      role: 'Dosen',
+      expertise: 'Komputasi Statistik, Machine Learning, Data Science',
+      bio: 'Professor Komputasi Statistik dengan publikasi di jurnal internasional. Fokus riset: machine learning terapan untuk prediksi time series, Bayesian inference, dan komputasi statistik dengan R/Python.',
+      email: 'ahmad.hidayat@untirta.ac.id',
+      imageUrl: '',
+      courses: 'Komputasi Statistik, Machine Learning, Data Science, Komputasi Statistika Lanjut',
+      order: 3,
+    },
+  ]
+
+  for (const d of dosenData) {
+    const existing = await db.dosen.findFirst({ where: { name: d.name } })
+    if (!existing) {
+      await db.dosen.create({ data: d })
+    }
+  }
+
   // --- Aspirasi Mahasiswa (sample seed) ---
   const aspirasiData = [
     { name: 'Oji', content: 'Lab komputasi perlu ditambah ruang studi yang lebih luas agar mahasiswa bisa berlatih R dan Python dengan nyaman.', category: 'Fasilitas' },

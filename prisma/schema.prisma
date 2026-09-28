@@ -6,9 +6,12 @@
 //
 // To switch to Supabase PostgreSQL:
 //   1. Update DATABASE_URL in .env with Supabase pooler URL
-//   2. Change `provider = "sqlite"` → `provider = "postgresql"` below
-//   3. Run: bun run db:push && bun run db:seed
-//   4. See SUPABASE_SETUP.md for full migration guide
+//   2. Set DIRECT_URL with Supabase direct connection (for migrations)
+//   3. Uncomment `directUrl` below
+//   4. Change `provider = "sqlite"` → `provider = "postgresql"`
+//   5. Run: bun run db:push && bun run db:seed
+//   6. Run RLS policies: see supabase/rls-policies.sql (via Supabase SQL Editor)
+//   7. See SUPABASE_SETUP.md for full migration guide
 
 generator client {
   provider = "prisma-client-js"
@@ -18,7 +21,7 @@ datasource db {
   // ★ For Supabase, change "sqlite" → "postgresql"
   provider = "sqlite"
   url      = env("DATABASE_URL")
-  // ★ When using Supabase connection pooler, also set directUrl for migrations
+  // ★ When using Supabase connection pooler, uncomment to set directUrl for migrations
   // directUrl = env("DIRECT_URL")
 }
 
