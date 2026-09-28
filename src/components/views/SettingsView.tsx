@@ -6,7 +6,7 @@ import { PlaceholderImage } from '@/components/PlaceholderImage'
 import { ImageUploader } from '@/components/ImageUploader'
 import { SavedArticles } from '@/components/SavedArticles'
 import { toast } from 'sonner'
-import { User as UserIcon, Save, Image as ImageIcon } from 'lucide-react'
+import { User as UserIcon, Save, Image as ImageIcon, UserCheck } from 'lucide-react'
 
 export function SettingsView() {
   const user = useAppStore((s) => s.user)
@@ -194,14 +194,25 @@ export function SettingsView() {
         </div>
 
         <div className="border-t border-[var(--brand-ink)] pt-6 flex flex-col md:flex-row justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => setView('profile', studentId || undefined)}
-            disabled={!studentId}
-            className="text-xs uppercase font-condensed text-[var(--brand-ink-muted)] hover:text-[var(--brand-ink)] disabled:opacity-50"
-          >
-            Lihat Profil Saya →
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => setView('profile', studentId || undefined)}
+              disabled={!studentId}
+              className="text-xs uppercase font-condensed text-[var(--brand-ink-muted)] hover:text-[var(--brand-ink)] disabled:opacity-50"
+            >
+              Lihat Profil Saya →
+            </button>
+            {!studentId && (
+              <button
+                type="button"
+                onClick={() => setView('claim-profile')}
+                className="text-xs uppercase font-condensed text-[var(--brand-navy)] hover:text-[var(--brand-orange)] border border-[var(--brand-navy)] px-3 py-1.5 hover:border-[var(--brand-orange)] transition-colors inline-flex items-center gap-1.5"
+              >
+                <UserCheck className="w-3.5 h-3.5" /> Klaim Profil Mahasiswa (via NIM)
+              </button>
+            )}
+          </div>
           <button
             type="submit"
             className="bg-[var(--brand-ink)] text-white px-8 py-3 font-condensed uppercase tracking-widest text-sm hover:bg-[var(--brand-maroon)] transition-colors inline-flex items-center gap-2"

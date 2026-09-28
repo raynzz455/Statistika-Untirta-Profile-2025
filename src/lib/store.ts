@@ -20,6 +20,7 @@ export type ViewName =
   | 'series-detail'
   | 'dosen-detail'
   | 'aspirasi'
+  | 'claim-profile'
 
 export interface SessionUser {
   id: string

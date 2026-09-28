@@ -22,13 +22,14 @@ import { SeriesView } from '@/components/views/SeriesView'
 import { SeriesDetailView } from '@/components/views/SeriesDetailView'
 import { DosenDetailView } from '@/components/views/DosenDetailView'
 import { AspirasiView } from '@/components/views/AspirasiView'
+import { ClaimProfileView } from '@/components/views/ClaimProfileView'
 import { BackToTop } from '@/components/BackToTop'
 import type { ViewName } from '@/lib/store'
 
 const VALID_VIEWS: ViewName[] = [
   'home', 'directory', 'profile', 'classes', 'gallery',
   'articles', 'article-detail', 'events', 'about', 'login', 'admin', 'settings', 'member-profile',
-  'series', 'series-detail', 'dosen-detail', 'aspirasi',
+  'series', 'series-detail', 'dosen-detail', 'aspirasi', 'claim-profile',
 ]
 
 export default function Home() {
@@ -120,6 +121,8 @@ export default function Home() {
         return <DosenDetailView />
       case 'aspirasi':
         return <AspirasiView />
+      case 'claim-profile':
+        return <ClaimProfileView />
       default:
         return <HomeView />
     }

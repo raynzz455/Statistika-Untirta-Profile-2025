@@ -88,6 +88,8 @@ model Student {
   imageUrl    String?  @map("image_url")
   ownerId     String?  @map("owner_id") // user id who can edit this profile
   owner       User?    @relation(fields: [ownerId], references: [id])
+  email       String?  @unique // optional: pre-registered email for auto-link on OAuth signup
+  claimedAt   DateTime? @map("claimed_at") // when student claimed their profile via NIM
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
