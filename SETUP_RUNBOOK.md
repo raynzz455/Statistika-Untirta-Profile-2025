@@ -51,16 +51,23 @@ Panduan lengkap end-to-end untuk setup database, storage, dan auth dari awal hin
 4. Buka tab **Database** (di sidebar kiri)
 5. Di section **Connection string**, pilih mode **Transaction** (pooler) — port 6543
 
-> ⚠️ **CRITICAL — IPv6 Issue**: Supabase free tier direct connection (port 5432) is **IPv6-only** in some regions (including Southeast Asia Singapore). Many Indonesian ISPs don't support IPv6 → direct connections fail with "P1001: Can't reach database server".
+> ⚠️ **CRITICAL — IPv6 + Pooler Mode Issue**: Supabase free tier has 3 connection options. Use the right one for each env var:
 >
-> **Solution**: Use the POOLER URL (port 6543) for **BOTH** `DATABASE_URL` AND `DIRECT_URL`. The pooler supports IPv4 + IPv6 — always works.
+> | Var | URL | Port | Why |
+> |-----|-----|------|-----|
+> | `DATABASE_URL` | `aws-0-REGION.pooler.supabase.com` | 6543 | Transaction mode pooler — IPv4 OK, for app runtime |
+> | `DIRECT_URL` | `aws-0-REGION.pooler.supabase.com` | **5432** | **Session mode pooler** — IPv4 OK, for Prisma migrations |
+>
+> ⚠️ DO NOT use:
+> - `db.PROJECT_REF.supabase.co:5432` (Direct connection — IPv6-only, fails in Indonesia with P1001)
+> - `aws-0-REGION.pooler.supabase.com:6543` for DIRECT_URL (Transaction mode doesn't support Prisma migrations — will HANG on db:push)
 
-6. Salin 1 URL pooler (port 6543) saja — dipakai untuk kedua env vars:
+6. Salin 2 URLs dari Dashboard (atau modify 1 URL dengan ganti port):
 
 | Var | URL yang dipakai | Port | Untuk apa |
 |-----|------------------|------|-----------|
-| `DATABASE_URL` | **Connection pooling** (Transaction mode) | 6543 | App runtime + migrations (recommended) |
-| `DIRECT_URL` | **Connection pooling** (Transaction mode) — sama dengan atas | 6543 | Backup untuk migrations (default Prisma pakai directUrl) |
+| `DATABASE_URL` | **Connection pooling → Transaction mode** | 6543 | App runtime (Supavisor transaction pooler) |
+| `DIRECT_URL` | **Connection pooling → Session mode** | 5432 | Prisma migrations (db:push, db:migrate) — IPv4 + full features |
 
 > ⚠️ Ganti `[PASS]` dengan password yang Anda buat di Tahap 1.
 
@@ -86,7 +93,7 @@ Panduan lengkap end-to-end untuk setup database, storage, dan auth dari awal hin
    ```bash
    # 1. DATABASE (from Supabase → Project Settings → Database → Connection string)
    DATABASE_URL="postgresql://postgres.[REF]:[PASS]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
-   DIRECT_URL="postgresql://postgres.[REF]:[PASS]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+   DIRECT_URL="postgresql://postgres.[REF]:[PASS]@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
 
    # 2. SESSION SECRET (generate new)
    SESSION_SECRET="REPLACE_WITH_32_PLUS_CHAR_RANDOM_HEX_STRING"
@@ -478,29 +485,51 @@ Untuk development tanpa Supabase (e.g. offline, no internet):
 
 **Most common cause (90% of cases): IPv6 issue**
 
-Supabase free tier direct connection (port 5432) is IPv6-only in some regions (including Southeast Asia Singapore). Indonesian ISPs generally don't support IPv6 → connection fails.
+Supabase free tier direct connection (port 5432 at `db.PROJECT_REF.supabase.co`) is IPv6-only in some regions (including Southeast Asia Singapore). Indonesian ISPs generally don't support IPv6 → connection fails.
 
-**Fix**: Set BOTH `DATABASE_URL` AND `DIRECT_URL` to the POOLER URL (port 6543). The pooler supports IPv4.
+**Fix**: Use the POOLER hostname (`aws-0-REGION.pooler.supabase.com`) for BOTH env vars — it supports IPv4.
 
 ```bash
-# Wrong (causes P1001 in Indonesia):
+# Wrong (causes P1001 in Indonesia — uses direct IPv6-only URL):
 DATABASE_URL="postgresql://...@db.PROJECT_REF.supabase.co:5432/postgres"
 DIRECT_URL="postgresql://...@db.PROJECT_REF.supabase.co:5432/postgres"
 
-# Correct (uses pooler, works in Indonesia):
-DATABASE_URL="postgresql://...@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
-DIRECT_URL="postgresql://...@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+# Correct (uses pooler — IPv4 + IPv6 support):
+DATABASE_URL="postgresql://...@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"  # Transaction mode (app)
+DIRECT_URL="postgresql://...@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"     # Session mode (migrations)
 ```
 
-**Other causes (if pooler URL also fails):**
+### Error: db:push HANGS (no output, no error)
+
+**Most common cause: Wrong port for DIRECT_URL**
+
+Supabase pooler has TWO modes at the same hostname — different PORT:
+- Port 6543 = Transaction mode (limited features, doesn't support Prisma migrations)
+- Port 5432 = Session mode (full features, supports Prisma migrations)
+
+If `DIRECT_URL` uses port 6543 (transaction mode), Prisma can connect but `db:push` will HANG because transaction mode doesn't support the SQL features Prisma needs.
+
+**Fix**: Use port 5432 for DIRECT_URL (Session mode pooler):
+
+```bash
+# Wrong (causes hang — transaction mode doesn't support migrations):
+DATABASE_URL="postgresql://...@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+DIRECT_URL="postgresql://...@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"  # ← WRONG PORT
+
+# Correct (DIRECT_URL uses Session mode port 5432):
+DATABASE_URL="postgresql://...@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"  # Transaction (app runtime)
+DIRECT_URL="postgresql://...@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"     # Session (migrations)
+```
+
+Test connectivity (PowerShell):
+```powershell
+Test-NetConnection -ComputerName aws-0-ap-southeast-1.pooler.supabase.com -Port 5432
+# Expected: TcpTestSucceeded: True
+```
+
+**Other causes:**
 - Cek password di URL → encode URL special chars (e.g. `@` → `%40`)
 - Cek project region (Dashboard → Settings → General). Kalau bukan Singapore, ganti `ap-southeast-1` di URL pooler
-- Test koneksi langsung:
-  ```bash
-  # Windows PowerShell
-  Test-NetConnection -ComputerName aws-0-ap-southeast-1.pooler.supabase.com -Port 6543
-  # Expected: TcpTestSucceeded: True
-  ```
 - Cek apakah project Supabase paused (free tier auto-pause after 1 week idle)
   - Dashboard → Overview → kalau "Paused", klik "Restore project"
 
