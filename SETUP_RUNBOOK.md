@@ -162,9 +162,28 @@ bash scripts/setup.sh --verify-only
 
 ## Tahap 5 — Run SQL Files (RLS + Storage, 5 menit)
 
-Script `setup.sh` sudah membuat schema tabel via Prisma `db:push`. Tahap ini hanya untuk:
-1. **RLS policies** — security (WAJIB)
-2. **Storage bucket** — untuk upload foto
+> ⚠️ **IMPORTANT**: Schema di Prisma pakai `@@map` directive untuk snake_case table names (e.g. `User` → `users`, `SeriesItem` → `series_items`). Pastikan Anda pakai versi schema terbaru (commit setelah `c65e018`).
+
+### 5.0 — Reset schema (JIKA Anda sudah run db:push dengan schema lama)
+
+Jika Anda sudah run `bun run db:push` dengan schema LAMA (PascalCase tables seperti `User`, `Student`, `SeriesItem`), Anda perlu reset schema dulu supaya tables pakai snake_case yang baru:
+
+1. Buka Supabase SQL Editor
+2. Run perintah berikut (WARNING: hapus SEMUA tabel & data di schema public):
+   ```sql
+   DROP SCHEMA public CASCADE;
+   CREATE SCHEMA public;
+   GRANT ALL ON SCHEMA public TO postgres;
+   GRANT ALL ON SCHEMA public TO anon;
+   GRANT ALL ON SCHEMA public TO authenticated;
+   ```
+3. Lalu run ulang:
+   ```bash
+   bun run db:push    # creates 19 snake_case tables (users, students, articles, ...)
+   bun run db:seed    # seeds sample data
+   ```
+
+Jika Anda BELUM pernah run db:push dengan schema lama, **skip Section 5.0**, lanjut ke 5.1.
 
 ### 5.1 — Buka Supabase SQL Editor
 

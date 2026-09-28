@@ -6,6 +6,10 @@
 // This schema is configured for Supabase PostgreSQL.
 // For local dev without Supabase, see SETUP_RUNBOOK.md "Local SQLite mode".
 //
+// IMPORTANT: All models use @@map() to set snake_case table names.
+// This ensures the table names match the SQL files in supabase/ folder
+// (rls-policies.sql, storage-policies.sql) which use snake_case.
+//
 // Configuration:
 //   - provider = "postgresql" — uses Supabase PostgreSQL pooler (port 6543)
 //   - url = DATABASE_URL — pooler URL (Supavisor, transaction mode)
@@ -64,6 +68,8 @@ model User {
   // Messaging
   sentMessages     Message[] @relation("MessageSender")
   receivedMessages Message[] @relation("MessageRecipient")
+
+  @@map("users")
 }
 
 model Student {
@@ -91,6 +97,8 @@ model Student {
 
   // Portfolio items (websites, projects, certificates)
   portfolios  StudentPortfolio[]
+
+  @@map("students")
 }
 
 // Student Portfolio — supports 3 types:
@@ -114,6 +122,7 @@ model StudentPortfolio {
 
   @@index([studentId, type, order])
   @@index([type, studentId])
+  @@map("student_portfolios")
 }
 
 model Article {
@@ -135,6 +144,8 @@ model Article {
   seriesItems SeriesItem[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@map("articles")
 }
 
 model Series {
@@ -147,6 +158,8 @@ model Series {
   items       SeriesItem[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@map("series")
 }
 
 model SeriesItem {
@@ -158,6 +171,7 @@ model SeriesItem {
   article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
 
   @@unique([seriesId, articleId])
+  @@map("series_items")
 }
 
 model Dosen {
@@ -173,6 +187,8 @@ model Dosen {
   order       Int      @default(0) // for sorting
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@map("dosen")
 }
 
 model Tag {
@@ -181,6 +197,8 @@ model Tag {
   color     String   @default("#e892b8") // hex color for tag badge
   articles  ArticleTag[]
   createdAt DateTime @default(now())
+
+  @@map("tags")
 }
 
 model ArticleTag {
@@ -191,6 +209,7 @@ model ArticleTag {
   assignedAt DateTime @default(now())
 
   @@id([articleId, tagId])
+  @@map("article_tags")
 }
 
 model Bookmark {
@@ -202,6 +221,7 @@ model Bookmark {
   createdAt DateTime @default(now())
 
   @@unique([userId, articleId])
+  @@map("bookmarks")
 }
 
 model Like {
@@ -213,6 +233,7 @@ model Like {
   createdAt DateTime @default(now())
 
   @@unique([userId, articleId])
+  @@map("likes")
 }
 
 model Event {
@@ -232,6 +253,8 @@ model Event {
   recurrenceEndDate String? // ISO date string when recurrence ends (optional)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@map("events")
 }
 
 model Gallery {
@@ -243,6 +266,8 @@ model Gallery {
   uploader    User     @relation(fields: [uploaderId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@map("gallery")
 }
 
 model Rsvp {
@@ -256,6 +281,7 @@ model Rsvp {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, eventId])
+  @@map("rsvps")
 }
 
 model Comment {
@@ -266,6 +292,8 @@ model Comment {
   article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  @@map("comments")
 }
 
 model Follow {
@@ -277,6 +305,7 @@ model Follow {
   createdAt   DateTime @default(now())
 
   @@unique([followerId, followingId])
+  @@map("follows")
 }
 
 model Notification {
@@ -294,6 +323,7 @@ model Notification {
   actor       User?    @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([recipientId, read, createdAt])
+  @@map("notifications")
 }
 
 model Message {
@@ -309,6 +339,7 @@ model Message {
 
   @@index([recipientId, read, createdAt])
   @@index([senderId, recipientId, createdAt])
+  @@map("messages")
 }
 
 // Aspirasi Mahasiswa — anonymous (just name) feedback wall
@@ -323,4 +354,5 @@ model Aspirasi {
 
   @@index([approved, createdAt])
   @@index([category, approved])
+  @@map("aspirasi")
 }

@@ -1,16 +1,26 @@
 -- ============================================================================
 -- Statistika '25 — Row-Level Security (RLS) Policies
 -- ============================================================================
--- Run AFTER schema.sql. Sets up RLS policies for all tables.
+-- SELF-CONTAINED: Creates missing tables (profiles, audit_log) IF NOT
+-- EXISTS at the top, then applies RLS policies to all tables.
+--
+-- Run AFTER `bun run db:push` (which creates 19 Prisma tables in snake_case
+-- via @@map directive: users, students, articles, series, series_items,
+-- dosen, tags, article_tags, bookmarks, likes, events, rsvps, gallery,
+-- comments, follows, notifications, messages, aspirasi, student_portfolios).
+--
+-- This file ADDS 2 tables not in Prisma schema:
+--   - profiles   (mirrors auth.users for Supabase Auth integration)
+--   - audit_log  (security audit log for admin actions)
 --
 -- Policy design:
 --   - Public read access for non-sensitive data (students, articles, etc.)
 --   - Authenticated users can modify their own data
---   - Admin users have full access to all data
+--   - Admin users have full access to all tables
 --   - Private data (notifications, messages) is per-user only
 --
 -- Admin role is determined by checking profiles.role = 'admin'
--- (profile is auto-created from auth.users via trigger in schema.sql)
+-- (profile is auto-created from auth.users via trigger below)
 --
 -- Usage:
 --   1. Open Supabase Dashboard → SQL Editor → New query
@@ -19,7 +29,88 @@
 -- ============================================================================
 
 -- ============================================================================
--- HELPER FUNCTIONS
+-- SECTION 0: CREATE MISSING TABLES (not in Prisma schema)
+-- ============================================================================
+-- These tables are required by the RLS policies below but are NOT defined
+-- in prisma/schema.prisma. They are Supabase-specific:
+--   - profiles mirrors auth.users (for Supabase Auth integration)
+--   - audit_log is for security audit tracking
+
+-- === profiles table ===
+-- Mirrors auth.users. Auto-populated via trigger when user signs up via
+-- Supabase Auth (Google, GitHub, email, etc.).
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id           UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  username     TEXT UNIQUE,
+  role         TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+  display_name TEXT,
+  theme        TEXT NOT NULL DEFAULT 'light' CHECK (theme IN ('light', 'dark')),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_username ON public.profiles(username);
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
+
+-- === audit_log table ===
+-- Tracks admin actions (delete aspirasi, edit dosen, export data, etc.)
+-- for security audit and accountability.
+CREATE TABLE IF NOT EXISTS public.audit_log (
+  id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  actor_id   TEXT NOT NULL,
+  action     TEXT NOT NULL,
+  target_id  TEXT,
+  metadata   TEXT,
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_log_actor_id ON public.audit_log(actor_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_action ON public.audit_log(action);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON public.audit_log(created_at DESC);
+
+-- ============================================================================
+-- SECTION 1: TRIGGERS (auto-populate profiles from auth.users)
+-- ============================================================================
+
+-- Trigger: auto-create profile when user signs up via Supabase Auth
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, username, display_name)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1))
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Trigger: auto-update updated_at on row update (for profiles table)
+CREATE OR REPLACE FUNCTION public.update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS set_updated_at ON public.profiles;
+CREATE TRIGGER set_updated_at
+  BEFORE UPDATE ON public.profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at();
+
+-- ============================================================================
+-- SECTION 2: HELPER FUNCTIONS
 -- ============================================================================
 
 -- Check if current user is admin (by checking profiles.role)
@@ -336,7 +427,37 @@ CREATE POLICY "Admin manage aspirasi"
   USING (public.is_admin());
 
 -- ============================================================================
--- 15. AUDIT LOG — admin read only
+-- 15. STUDENT_PORTFOLIOS — public read, owner/admin manage
+-- ============================================================================
+ALTER TABLE student_portfolios ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read student_portfolios"
+  ON student_portfolios FOR SELECT
+  USING (true);
+
+CREATE POLICY "Admin manage student_portfolios"
+  ON student_portfolios FOR ALL
+  USING (public.is_admin());
+
+-- ============================================================================
+-- 16. USERS — admin read only (this is the Prisma User table for custom auth)
+-- ============================================================================
+-- Note: This is the Prisma `User` model, mapped to table `users`.
+-- It stores test users (admin/admin, user/user, fauzi/fauzi) for custom
+-- session-based auth (src/lib/session.ts). It is SEPARATE from `profiles`
+-- (which stores Supabase Auth users).
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admin read users"
+  ON users FOR SELECT
+  USING (public.is_admin());
+
+CREATE POLICY "Admin manage users"
+  ON users FOR ALL
+  USING (public.is_admin());
+
+-- ============================================================================
+-- 17. AUDIT LOG — admin read only
 -- ============================================================================
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 
@@ -349,14 +470,21 @@ CREATE POLICY "System insert audit_log"
   WITH CHECK (auth.uid() IS NOT NULL OR public.is_admin());
 
 -- ============================================================================
--- RLS POLICIES COMPLETE — All 17 tables secured
+-- RLS POLICIES COMPLETE — All 21 tables secured
 -- ============================================================================
+-- Tables with RLS enabled:
+--   Prisma tables (19): users, students, articles, series, series_items,
+--     dosen, tags, article_tags, bookmarks, likes, events, rsvps, gallery,
+--     comments, follows, notifications, messages, aspirasi, student_portfolios
+--   SQL-only tables (2): profiles, audit_log
+--   Total: 21 tables with RLS
+--
 -- Verification:
 --   SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public';
 -- All tables should show rowsecurity = true.
 --
 -- To test policies:
---   1. Sign in as a regular user
+--   1. Sign in as a regular user (via OAuth Google/GitHub)
 --   2. Try to read another user's notifications → should fail
 --   3. Try to delete an aspirasi → should fail (unless admin)
 --   4. Sign in as admin → should succeed for all operations
