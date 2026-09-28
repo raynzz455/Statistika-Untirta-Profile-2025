@@ -92,7 +92,9 @@ Panduan lengkap end-to-end untuk setup database, storage, dan auth dari awal hin
 
    ```bash
    # 1. DATABASE (from Supabase → Project Settings → Database → Connection string)
-   DATABASE_URL="postgresql://postgres.[REF]:[PASS]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+   #    NOTE: DATABASE_URL needs ?pgbouncer=true (transaction mode pooler requires it
+   #    to avoid "prepared statement 's1' already exists" error during db:seed)
+   DATABASE_URL="postgresql://postgres.[REF]:[PASS]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
    DIRECT_URL="postgresql://postgres.[REF]:[PASS]@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
 
    # 2. SESSION SECRET (generate new)
@@ -480,6 +482,27 @@ Untuk development tanpa Supabase (e.g. offline, no internet):
 ---
 
 ## Troubleshooting
+
+### Error: "prepared statement 's1' already exists" (during db:seed)
+
+**Cause**: Transaction mode pooler (port 6543) doesn't support PostgreSQL prepared statements. Prisma uses prepared statements by default — when reusing "s1" across requests, PgBouncer routes to different backend connections, causing the conflict.
+
+**Fix**: Add `?pgbouncer=true` to DATABASE_URL — this tells Prisma to use simple query protocol (no prepared statements):
+
+```bash
+# Wrong (causes "prepared statement s1 already exists" during db:seed):
+DATABASE_URL="postgresql://...@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+
+# Correct (add ?pgbouncer=true at the end):
+DATABASE_URL="postgresql://...@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+```
+
+⚠️ Do NOT add `?pgbouncer=true` to DIRECT_URL (session mode, port 5432). Session mode supports prepared statements — adding pgbouncer=true would disable a feature that's actually supported.
+
+After fixing .env, re-run:
+```bash
+bun run db:seed
+```
 
 ### Error: "P1001: Can't reach database server"
 
