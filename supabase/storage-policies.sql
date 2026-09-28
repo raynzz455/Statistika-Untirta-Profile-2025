@@ -5,11 +5,14 @@
 -- Creates the storage bucket for student photos + gallery images,
 -- and sets up RLS policies for upload/retrieve/delete.
 --
+-- IDEMPOTENT: Safe to run multiple times. Drops existing policies
+-- before recreating them (DROP POLICY IF EXISTS).
+--
 -- Bucket: `mahasiswa-photos` (private — uses signed URLs)
 -- ============================================================================
 
 -- ============================================================================
--- 1. CREATE STORAGE BUCKET
+-- 1. CREATE OR UPDATE STORAGE BUCKET
 -- ============================================================================
 -- Insert into storage.buckets (Supabase internal storage schema)
 -- Bucket is PRIVATE (public = false) — signed URLs required for access
@@ -27,12 +30,23 @@ ON CONFLICT (id) DO UPDATE SET
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- ============================================================================
--- 2. STORAGE POLICIES
+-- 2. DROP EXISTING POLICIES (idempotent — safe to re-run)
 -- ============================================================================
--- Storage policies are separate from table RLS — they have their own schema.
--- Reference: https://supabase.com/docs/guides/storage/security/storage-policies
+-- Drop all policies we're about to create, in case they already exist
+-- from a previous run. This prevents error 42710 (duplicate_object).
 
--- === READ POLICIES ===
+DROP POLICY IF EXISTS "Users read own uploads" ON storage.objects;
+DROP POLICY IF EXISTS "Admins read all uploads" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users upload to own folder" ON storage.objects;
+DROP POLICY IF EXISTS "Admins upload anywhere" ON storage.objects;
+DROP POLICY IF EXISTS "Users update own uploads" ON storage.objects;
+DROP POLICY IF EXISTS "Admins update any upload" ON storage.objects;
+DROP POLICY IF EXISTS "Users delete own uploads" ON storage.objects;
+DROP POLICY IF EXISTS "Admins delete any upload" ON storage.objects;
+
+-- ============================================================================
+-- 3. STORAGE POLICIES (READ)
+-- ============================================================================
 
 -- Users can read their own uploads (via signed URL — owner only)
 CREATE POLICY "Users read own uploads"
@@ -50,7 +64,9 @@ CREATE POLICY "Admins read all uploads"
     AND public.is_admin()
   );
 
--- === WRITE POLICIES (INSERT) ===
+-- ============================================================================
+-- 4. STORAGE POLICIES (WRITE / INSERT)
+-- ============================================================================
 
 -- Authenticated users can upload to their own folder
 -- Folder structure: {userId}/{filename}
@@ -70,7 +86,9 @@ CREATE POLICY "Admins upload anywhere"
     AND public.is_admin()
   );
 
--- === UPDATE POLICIES ===
+-- ============================================================================
+-- 5. STORAGE POLICIES (UPDATE)
+-- ============================================================================
 
 -- Users can update their own uploads
 CREATE POLICY "Users update own uploads"
@@ -88,7 +106,9 @@ CREATE POLICY "Admins update any upload"
     AND public.is_admin()
   );
 
--- === DELETE POLICIES ===
+-- ============================================================================
+-- 6. STORAGE POLICIES (DELETE)
+-- ============================================================================
 
 -- Users can delete their own uploads
 CREATE POLICY "Users delete own uploads"
@@ -112,6 +132,7 @@ CREATE POLICY "Admins delete any upload"
 -- Verification:
 --   SELECT * FROM storage.buckets WHERE id = 'mahasiswa-photos';
 --   SELECT * FROM storage.policies WHERE bucket_id = 'mahasiswa-photos';
+--   -- OR: SELECT * FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects';
 --
 -- To test:
 --   1. Sign in as user A
@@ -132,10 +153,12 @@ CREATE POLICY "Admins delete any upload"
 -- )
 -- ON CONFLICT (id) DO NOTHING;
 --
+-- DROP POLICY IF EXISTS "Public read public-assets" ON storage.objects;
 -- CREATE POLICY "Public read public-assets"
 --   ON storage.objects FOR SELECT
 --   USING (bucket_id = 'public-assets');
 --
+-- DROP POLICY IF EXISTS "Admin manage public-assets" ON storage.objects;
 -- CREATE POLICY "Admin manage public-assets"
 --   ON storage.objects FOR ALL
 --   USING (bucket_id = 'public-assets' AND public.is_admin());
