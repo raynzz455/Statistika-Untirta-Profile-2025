@@ -18,6 +18,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { setSessionCookie } from '@/lib/session'
+import { db } from '@/lib/db'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
@@ -37,7 +38,6 @@ export async function GET(req: NextRequest) {
 
   // === Check if Supabase is configured ===
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    // Supabase not configured — can't do OAuth
     return NextResponse.redirect(`${origin}/#/login/oauth-error`)
   }
 
@@ -69,16 +69,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${origin}/#/login/oauth-error`)
   }
 
-  // === Step 3: Bridge — set custom 'stat_session' cookie ===
-  // This is the KEY FIX: set the custom session cookie so all 47 route
-  // handlers (which use getSession()) recognize this Google OAuth user
-  // as logged in.
-  //
-  // The session payload contains:
-  // - userId: Supabase auth.users.id (UUID)
-  // - username: extracted from email (e.g. "john" from "john@gmail.com")
-  // - role: 'user' (admin role is set separately via SQL UPDATE on profiles)
-  // - displayName: full name from Google (or email username as fallback)
+  // === Step 3: Check profiles table for admin role ===
+  // If this user was previously set as admin via SQL:
+  //   UPDATE profiles SET role = 'admin' WHERE id = 'USER_UUID';
+  // Then on next login, the callback reads role='admin' from profiles
+  // and sets it in the custom session cookie. No logout/login needed
+  // for the role to take effect.
+  let role: 'admin' | 'user' = 'user'
+  try {
+    const profile = await db.$queryRaw<{ role: string | null }[]>`
+      SELECT role FROM profiles WHERE id = ${user.id}::text
+    `.catch(() => [])
+    if (profile && profile.length > 0 && profile[0].role === 'admin') {
+      role = 'admin'
+    }
+  } catch {
+    // profiles table might not exist yet (before running rls-policies.sql)
+    // Default to 'user' role — safe fallback
+  }
+
+  // === Step 4: Bridge — set custom 'stat_session' cookie ===
   const username = user.email?.split('@')[0] || 'google_user'
   const displayName = (user.user_metadata?.full_name as string) ||
                       (user.user_metadata?.name as string) ||
@@ -87,12 +97,10 @@ export async function GET(req: NextRequest) {
   setSessionCookie(res, {
     userId: user.id,
     username,
-    role: 'user', // default role; admin is set via SQL: UPDATE profiles SET role='admin'
+    role,
     displayName,
   })
 
-  // === Step 4: Redirect to home (cookies are set on res) ===
-  // Both Supabase cookies AND custom 'stat_session' cookie are now set.
-  // The app will recognize the user as logged in via /api/auth/me.
+  // === Step 5: Redirect to home (cookies are set on res) ===
   return res
 }
