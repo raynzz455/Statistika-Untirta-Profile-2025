@@ -40,13 +40,28 @@ function isSupabaseConfigured(): boolean {
 // ⚠️ Function name MUST be `proxy` (not `middleware`) in Next.js 16+.
 // See: https://next.js.org/docs/messages/middleware-to-proxy
 export async function proxy(req: NextRequest) {
+  const pathname = req.nextUrl.pathname
+
+  // === OAuth callback fallback ===
+  // If Supabase redirects to root URL with ?code=... (happens when
+  // /auth/callback is not in Supabase Redirect URLs list), catch it
+  // here and redirect to /auth/callback?code=... so the callback
+  // handler can process it.
+  const code = req.nextUrl.searchParams.get('code')
+  if (code && pathname === '/' && !pathname.startsWith('/auth/callback')) {
+    const callbackUrl = new URL('/auth/callback', req.url)
+    callbackUrl.searchParams.set('code', code)
+    const next = req.nextUrl.searchParams.get('next')
+    if (next) callbackUrl.searchParams.set('next', next)
+    return NextResponse.redirect(callbackUrl)
+  }
+
   // Skip proxy entirely if Supabase not configured (local dev mode)
   if (!isSupabaseConfigured()) {
     return NextResponse.next()
   }
 
   // Skip public paths
-  const pathname = req.nextUrl.pathname
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
     return NextResponse.next()
   }
