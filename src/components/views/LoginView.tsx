@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppStore } from '@/lib/store'
 import { Eye, EyeOff, Lock, User as UserIcon, ShieldCheck, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
@@ -14,11 +14,19 @@ const TEST_ACCOUNTS = [
 export function LoginView() {
   const setUser = useAppStore((s) => s.setUser)
   const setView = useAppStore((s) => s.setView)
+  const selectedId = useAppStore((s) => s.selectedId)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Detect OAuth error from hash routing (#/login/oauth-error)
+  useEffect(() => {
+    if (selectedId === 'oauth-error') {
+      setError('Login Google gagal. Pastikan Supabase + Google OAuth sudah dikonfigurasi. Hubungi admin jika masalah berlanjut.')
+    }
+  }, [selectedId])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

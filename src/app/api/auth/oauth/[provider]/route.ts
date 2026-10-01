@@ -1,22 +1,31 @@
 // ============================================================================
-// GET /api/auth/oauth/[provider] — Initiate OAuth sign-in
+// GET /api/auth/oauth/[provider] — Initiate OAuth sign-in (SERVER-SIDE)
 // ============================================================================
-// Triggers the OAuth flow for the specified provider (google, github, etc).
-// Redirects to Supabase Auth, which then redirects back to /auth/callback
-// after the user consents.
+// This route handler creates a server-side Supabase client and calls
+// signInWithOAuth to get the Google/GitHub OAuth URL, then redirects
+// the browser to that URL.
 //
-// Usage:
-//   <a href="/api/auth/oauth/google">Sign in with Google</a>
-//   fetch('/api/auth/oauth/github').then(r => r.json()).then(d => window.location = d.url)
+// Flow:
+//   1. User clicks "Masuk dengan Google" (link to /api/auth/oauth/google)
+//   2. This handler calls supabase.auth.signInWithOAuth({ provider: 'google' })
+//   3. Supabase returns a Google OAuth URL
+//   4. This handler redirects browser to that URL
+//   5. User consents on Google
+//   6. Google redirects to Supabase callback
+//   7. Supabase redirects to /auth/callback?code=...
+//   8. /auth/callback exchanges code for session → sets cookies → redirect home
 //
-// After successful auth, user is redirected to /auth/callback?code=... which
-// exchanges the code for a session (see src/app/auth/callback/route.ts).
+// IMPORTANT: This uses createServerClient (NOT createBrowserClient) because
+// route handlers run on the server, not in the browser.
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseBrowser } from '@/lib/supabase-browser'
+import { createServerClient } from '@supabase/ssr'
 
-const SUPPORTED_PROVIDERS = ['google', 'github', 'apple', 'discord', 'azure', 'facebook', 'gitlab']
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+
+const SUPPORTED_PROVIDERS = ['google', 'github', 'apple', 'discord']
 
 export async function GET(
   req: NextRequest,
@@ -24,53 +33,88 @@ export async function GET(
 ) {
   const { provider } = await params
 
-  // Validate provider
+  // === Validate provider ===
   if (!SUPPORTED_PROVIDERS.includes(provider)) {
     return NextResponse.json(
-      { error: `Provider ${provider} tidak didukung. Yang didukung: ${SUPPORTED_PROVIDERS.join(', ')}` },
+      { error: `Provider "${provider}" tidak didukung. Yang didukung: ${SUPPORTED_PROVIDERS.join(', ')}` },
       { status: 400 }
     )
   }
 
-  // Get redirect target (default to home)
+  // === Check if Supabase is configured ===
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    const origin = req.nextUrl.origin
+    // Redirect to login page with error flag in hash (no query params — hash routing)
+    return NextResponse.redirect(
+      `${origin}/#/login/oauth-error`,
+      { status: 302 }
+    )
+  }
+
+  // === Get redirect target ===
   const { searchParams } = new URL(req.url)
   const next = searchParams.get('next') ?? '/'
-
   // Validate next URL (prevent open redirect)
   const allowedNext = next.startsWith('/') && !next.startsWith('//') ? next : '/'
 
-  // Get origin (works for both localhost and production)
   const origin = req.nextUrl.origin
+  const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(allowedNext)}`
 
   try {
-    const supabase = supabaseBrowser
+    // === Create server-side Supabase client ===
+    // KEY FIX: Use createServerClient (NOT createBrowserClient from supabase-browser.ts)
+    // because this route handler runs on the server, not in the browser.
+    // createBrowserClient uses document.cookie which doesn't exist server-side.
+    const res = NextResponse.redirect(`${origin}/#/login/oauth-error`)
+
+    const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              res.cookies.set(name, value, options)
+            )
+          } catch {
+            // Called from a context where cookies can't be set — safe to ignore
+            // (PKCE cookies will be handled in the callback route)
+          }
+        },
+      },
+    })
+
+    // === Call signInWithOAuth ===
+    // This returns a URL that the browser should redirect to (Google consent screen)
+    // It may also set PKCE cookies (code_verifier) via setAll()
     const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: provider as any,
+      provider: provider as 'google' | 'github' | 'apple' | 'discord',
       options: {
-        redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(allowedNext)}`,
+        redirectTo,
       },
     })
 
     if (error) {
       console.error(`[oauth/${provider}] error:`, error.message)
-      return NextResponse.redirect(
-        `${origin}/#/login?error=${encodeURIComponent(error.message)}`
-      )
+      return NextResponse.redirect(`${origin}/#/login/oauth-error`)
     }
 
-    // Redirect to Supabase OAuth URL (Google/GitHub/etc)
+    // === Redirect to OAuth provider URL (Google/GitHub/etc) ===
     if (data?.url) {
-      return NextResponse.redirect(data.url)
+      // Create final redirect response that includes any cookies set by signInWithOAuth
+      const redirectRes = NextResponse.redirect(data.url, { status: 302 })
+      // Copy any cookies that were set during signInWithOAuth (PKCE verifier etc)
+      res.cookies.getAll().forEach(cookie => {
+        redirectRes.cookies.set(cookie.name, cookie.value, cookie)
+      })
+      return redirectRes
     }
 
-    return NextResponse.json(
-      { error: 'Tidak ada URL OAuth yang dikembalikan.' },
-      { status: 500 }
-    )
+    // No URL returned — something went wrong
+    return NextResponse.redirect(`${origin}/#/login/oauth-error`)
   } catch (e: any) {
     console.error(`[oauth/${provider}] exception:`, e?.message)
-    return NextResponse.redirect(
-      `${origin}/#/login?error=${encodeURIComponent('Gagal memulai OAuth flow')}`
-    )
+    return NextResponse.redirect(`${origin}/#/login/oauth-error`)
   }
 }
