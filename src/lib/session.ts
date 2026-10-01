@@ -2,6 +2,7 @@
 // For demo purposes only - in production use NextAuth or jose/jwt libraries.
 import { cookies } from 'next/headers'
 import { createHash, randomBytes } from 'crypto'
+import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'statistika25-dev-secret-key-change-me'
@@ -72,6 +73,39 @@ export async function setSession(payload: Omit<SessionPayload, 'issuedAt'>): Pro
   })
 }
 
+/**
+ * Set session cookie directly on a NextResponse object.
+ * Used in Route Handlers (e.g. /auth/callback) where cookies() from
+ * next/headers can't be used because we're returning a redirect.
+ *
+ * This is the BRIDGE between Supabase Auth and the custom session:
+ * After Google OAuth sets Supabase cookies, this function also sets
+ * the custom 'stat_session' cookie so all 47 route handlers (which
+ * use getSession()) recognize the user as logged in.
+ */
+export function setSessionCookie(
+  res: NextResponse,
+  payload: Omit<SessionPayload, 'issuedAt'>
+): void {
+  const full: SessionPayload = { ...payload, issuedAt: Date.now() }
+  const payloadStr = Buffer.from(JSON.stringify(full), 'utf-8').toString('base64')
+  const signed = sign(payloadStr)
+  res.cookies.set(SESSION_COOKIE, signed, {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: SESSION_MAX_AGE,
+    secure: process.env.NODE_ENV === 'production',
+  })
+}
+
+/**
+ * Clear session cookie on a NextResponse object (for logout in route handlers).
+ */
+export function clearSessionCookie(res: NextResponse): void {
+  res.cookies.delete(SESSION_COOKIE)
+}
+
 export async function clearSession(): Promise<void> {
   const cookieStore = await cookies()
   cookieStore.delete(SESSION_COOKIE)
@@ -80,3 +114,6 @@ export async function clearSession(): Promise<void> {
 export function generateToken(): string {
   return randomBytes(32).toString('hex')
 }
+
+// Export constants for use in other modules
+export { SESSION_COOKIE, SESSION_MAX_AGE }
