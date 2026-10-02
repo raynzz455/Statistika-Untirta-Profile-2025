@@ -195,7 +195,7 @@ export function DirectoryView() {
           page={page}
           totalPages={totalPages}
           onPageChange={setPage}
-          total={yearFiltered.length}
+          total={students.length}
           pageSize={PAGE_SIZE}
         />
         </>
