@@ -41,14 +41,34 @@ export default function Home() {
   const setAuthLoading = useAppStore((s) => s.setAuthLoading)
   const setView = useAppStore((s) => s.setView)
 
-  // Load current session on mount
+  // Load current session on mount + apply smart post-login routing
   useEffect(() => {
     fetch('/api/auth/me')
       .then((r) => r.json())
-      .then((d) => setUser(d.user || null))
+      .then((d) => {
+        const u = d.user || null
+        setUser(u)
+
+        // === Smart post-login routing (client-side safety net) ===
+        // The /auth/callback route already redirects based on role/studentId,
+        // but if the user lands here directly via /#/claim-profile (e.g. via
+        // back button, shared link, or stale cookie) AND they already have a
+        // linked student, bounce them to their profile instead.
+        if (typeof window !== 'undefined' && u) {
+          const hash = window.location.hash.replace(/^#\/?/, '')
+          const [v] = hash.split('/')
+          if (v === 'claim-profile' && u.studentId) {
+            // Already linked — skip claim page, go straight to profile
+            setView('profile', u.studentId)
+          } else if (v === 'claim-profile' && u.role === 'admin') {
+            // Admins don't need to claim — send to home (admin panel)
+            setView('home')
+          }
+        }
+      })
       .catch(() => setUser(null))
       .finally(() => setAuthLoading(false))
-  }, [setUser, setAuthLoading])
+  }, [setUser, setAuthLoading, setView])
 
   // Sync from URL hash on mount
   useEffect(() => {

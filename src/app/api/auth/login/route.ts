@@ -28,6 +28,19 @@ export async function POST(req: NextRequest) {
       displayName: user.displayName,
     })
 
+    // Look up linked student (if any) so the frontend can apply
+    // smart post-login routing (claimed → profile, unclaimed → claim-profile).
+    let studentId: string | null = null
+    try {
+      const linked = await db.student.findUnique({
+        where: { ownerId: user.id },
+        select: { id: true },
+      })
+      if (linked) studentId = linked.id
+    } catch {
+      // students table may not exist yet — leave studentId null
+    }
+
     return NextResponse.json({
       ok: true,
       user: {
@@ -36,6 +49,7 @@ export async function POST(req: NextRequest) {
         role: user.role,
         displayName: user.displayName,
         theme: user.theme,
+        studentId,
       },
     })
   } catch (e) {

@@ -15,28 +15,40 @@ export async function GET(req: NextRequest) {
     session = await getSession()
   }
 
-  const articles = await db.article.findMany({
-    where: {
-      AND: [
-        // Published articles visible to everyone; drafts only to author/admin
-        includeDrafts && session
-          ? {
-              OR: [
-                { published: true },
-                { authorId: session.userId },
-                ...(session.role === 'admin' ? [{}] : []),
-              ],
-            }
-          : { published: true },
-        ...(category && category !== 'all' ? [{ category }] : []),
-      ],
-    },
-    include: {
-      tags: { include: { tag: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-    take: limit,
-  })
+  let articles: any[] = []
+  try {
+    articles = await db.article.findMany({
+      where: {
+        AND: [
+          // Published articles visible to everyone; drafts only to author/admin
+          includeDrafts && session
+            ? {
+                OR: [
+                  { published: true },
+                  { authorId: session.userId },
+                  ...(session.role === 'admin' ? [{}] : []),
+                ],
+              }
+            : { published: true },
+          ...(category && category !== 'all' ? [{ category }] : []),
+        ],
+      },
+      include: {
+        tags: { include: { tag: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    })
+  } catch (e: any) {
+    // DB unreachable (missing DATABASE_URL, schema not pushed, etc).
+    // Return empty list + dbError flag instead of 500 so the frontend
+    // can render "Belum ada artikel" gracefully.
+    console.error('[api/articles] query error:', e?.message?.slice(0, 100))
+    return withCache(
+      NextResponse.json({ articles: [], dbError: true }),
+      CachePresets.publicDynamic
+    )
+  }
   return withCache(
     NextResponse.json({
       articles: articles.map((a) => ({

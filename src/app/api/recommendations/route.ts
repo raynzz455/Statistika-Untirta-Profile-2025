@@ -9,59 +9,69 @@ import { getSession } from '@/lib/session'
 // 3. Recommend other published articles with matching tags/categories
 //    that the user hasn't interacted with yet
 // 4. If no user history, return most-liked + newest articles
+//
+// NOTE: All DB queries are wrapped in try/catch. If the DB is unreachable
+// (e.g. DATABASE_URL not set, schema not pushed), we return an empty
+// recommendation list with HTTP 200 instead of crashing with 500.
 export async function GET() {
   const session = await getSession()
   const limit = 6
 
   // Anonymous user — return most popular + newest articles
   if (!session) {
-    const [popular, recent] = await Promise.all([
-      db.article.findMany({
-        where: { published: true },
-        include: { _count: { select: { likes: true } } },
-        orderBy: { likes: { _count: 'desc' } },
-        take: 3,
-      }),
-      db.article.findMany({
-        where: { published: true },
-        orderBy: { createdAt: 'desc' },
-        take: 3,
-      }),
-    ])
+    try {
+      const [popular, recent] = await Promise.all([
+        db.article.findMany({
+          where: { published: true },
+          include: { _count: { select: { likes: true } } },
+          orderBy: { likes: { _count: 'desc' } },
+          take: 3,
+        }),
+        db.article.findMany({
+          where: { published: true },
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+        }),
+      ])
 
-    // Merge + dedupe
-    const seen = new Set<string>()
-    const recommended = [...popular, ...recent].filter((a) => {
-      if (seen.has(a.id)) return false
-      seen.add(a.id)
-      return true
-    }).slice(0, limit)
+      // Merge + dedupe
+      const seen = new Set<string>()
+      const recommended = [...popular, ...recent].filter((a) => {
+        if (seen.has(a.id)) return false
+        seen.add(a.id)
+        return true
+      }).slice(0, limit)
 
-    return NextResponse.json({
-      recommendations: recommended.map((a) => ({
-        ...a,
-        reason: 'Populer & Terbaru',
-        score: 0,
-      })),
-      basedOnHistory: false,
-    })
+      return NextResponse.json({
+        recommendations: recommended.map((a) => ({
+          ...a,
+          reason: 'Populer & Terbaru',
+          score: 0,
+        })),
+        basedOnHistory: false,
+      })
+    } catch (e: any) {
+      console.error('[api/recommendations] query error:', e?.message?.slice(0, 100))
+      return NextResponse.json({ recommendations: [], basedOnHistory: false })
+    }
   }
 
   // Logged-in user — find their interaction history
-  const [likedArticles, bookmarkedArticles, commentedArticles] = await Promise.all([
-    db.like.findMany({
-      where: { userId: session.userId },
-      select: { articleId: true },
-    }),
-    db.bookmark.findMany({
-      where: { userId: session.userId },
-      select: { articleId: true },
-    }),
-    db.comment.findMany({
-      where: { userId: session.userId },
-      select: { articleId: true },
-    }),
-  ])
+  try {
+    const [likedArticles, bookmarkedArticles, commentedArticles] = await Promise.all([
+      db.like.findMany({
+        where: { userId: session.userId },
+        select: { articleId: true },
+      }),
+      db.bookmark.findMany({
+        where: { userId: session.userId },
+        select: { articleId: true },
+      }),
+      db.comment.findMany({
+        where: { userId: session.userId },
+        select: { articleId: true },
+      }),
+    ])
 
   const interactedArticleIds = new Set([
     ...likedArticles.map((l) => l.articleId),
@@ -220,4 +230,8 @@ export async function GET() {
     historySize: interactedArticleIds.size,
     followedCount: followingIds.length,
   })
+  } catch (e: any) {
+    console.error('[api/recommendations] logged-in query error:', e?.message?.slice(0, 100))
+    return NextResponse.json({ recommendations: [], basedOnHistory: false })
+  }
 }

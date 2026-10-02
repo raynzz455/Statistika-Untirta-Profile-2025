@@ -14,7 +14,24 @@ export async function GET() {
   const prismaUser = await db.user.findUnique({
     where: { id: session.userId },
     select: { id: true, username: true, role: true, displayName: true, theme: true },
-  })
+  }).catch(() => null)
+
+  // === Look up linked student (works for both auth methods) ===
+  // The frontend uses this `studentId` to do smart post-login routing:
+  //   - present  → go straight to /#/profile/<studentId>
+  //   - absent   → go to /#/claim-profile (NIM entry form)
+  // Defensive: wrapped in try/catch because the `students` table or
+  // `owner_id` column may not exist yet in a fresh Supabase project.
+  let studentId: string | null = null
+  try {
+    const linked = await db.student.findUnique({
+      where: { ownerId: session.userId },
+      select: { id: true },
+    })
+    if (linked) studentId = linked.id
+  } catch {
+    // students table may not exist yet — leave studentId null
+  }
 
   if (prismaUser) {
     // Custom session user — return fresh data from DB
@@ -25,6 +42,7 @@ export async function GET() {
         role: prismaUser.role as 'admin' | 'user',
         displayName: prismaUser.displayName,
         theme: prismaUser.theme as 'light' | 'dark',
+        studentId,
       },
     })
   }
@@ -46,6 +64,7 @@ export async function GET() {
       role: session.role,
       displayName: session.displayName,
       theme: 'light' as const,
+      studentId,
     },
   })
 }

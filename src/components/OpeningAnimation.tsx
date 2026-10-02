@@ -4,7 +4,14 @@ import { useEffect, useState } from 'react'
 import { markIntroSeen, shouldShowIntro, useAppStore } from '@/lib/store'
 
 /**
- * Opening animation shown once every 3 hours per browser session.
+ * Opening animation shown once per hour per browser session.
+ *
+ * Persistence (dual storage in src/lib/store.ts):
+ *   - Cookie `stat25_intro_seen` (max-age=3600s, 1 hour)
+ *   - localStorage `stat25_intro_seen_v2` (absolute expiry timestamp)
+ * Both auto-expire after 1 hour — so on next page load after the window
+ * passes, the animation replays. Within the window, refreshes skip it.
+ *
  * Renders a scatter-plot reveal with axes, regression line, dots and brand text.
  */
 export function OpeningAnimation() {
@@ -15,7 +22,7 @@ export function OpeningAnimation() {
 
   useEffect(() => {
     setMounted(true)
-    // If already seen within the 3-hour window, skip entirely
+    // If already seen within the 1-hour window, skip entirely
     if (introSeen || !shouldShowIntro()) {
       setIntroSeen(true)
       return

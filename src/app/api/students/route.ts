@@ -8,13 +8,26 @@ export async function GET(req: NextRequest) {
   const kelas = url.searchParams.get('kelas')
   const q = url.searchParams.get('q')
 
-  const students = await db.student.findMany({
-    where: {
-      ...(kelas && kelas !== 'all' ? { kelas } : {}),
-      ...(q ? { name: { contains: q } } : {}),
-    },
-    orderBy: { nim: 'asc' },
-  })
+  let students: any[] = []
+  try {
+    students = await db.student.findMany({
+      where: {
+        ...(kelas && kelas !== 'all' ? { kelas } : {}),
+        ...(q ? { name: { contains: q } } : {}),
+      },
+      orderBy: { nim: 'asc' },
+    })
+  } catch (e: any) {
+    // Database not yet configured (e.g. fresh Supabase project, missing
+    // DATABASE_URL, or schema not pushed). Return an empty list instead
+    // of a 500 — the frontend gracefully renders "Belum ada mahasiswa"
+    // instead of crashing.
+    console.error('[api/students] query error:', e?.message?.slice(0, 100))
+    return withCache(
+      NextResponse.json({ students: [], dbError: true }),
+      CachePresets.publicDynamic
+    )
+  }
   return withCache(NextResponse.json({ students }), CachePresets.publicList)
 }
 
