@@ -26,7 +26,7 @@ export function SavedArticles() {
     setLoading(true)
     fetch('/api/bookmarks')
       .then((r) => r.json())
-      .then((d) => setArticles(d.articles || []))
+      .then((d) => setArticles(Array.isArray(d.articles) ? d.articles : []))
       .catch(() => setArticles([]))
       .finally(() => setLoading(false))
   }

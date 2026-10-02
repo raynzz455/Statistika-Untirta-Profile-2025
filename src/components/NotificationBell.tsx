@@ -60,7 +60,7 @@ export function NotificationBell() {
     fetch('/api/notifications?limit=20')
       .then((r) => r.json())
       .then((d) => {
-        setNotifications(d.notifications || [])
+        setNotifications(Array.isArray(d.notifications) ? d.notifications : [])
         setUnreadCount(d.unreadCount || 0)
       })
       .catch(() => {})

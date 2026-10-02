@@ -25,9 +25,11 @@ export function HomeView() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/articles?limit=6')
+    // cache: 'no-store' + Array.isArray defensive check — prevents
+    // 'e.map is not a function' TypeError if API returns unexpected shape.
+    fetch('/api/articles?limit=6', { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => setArticles(d.articles || []))
+      .then((d) => setArticles(Array.isArray(d.articles) ? d.articles : []))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
