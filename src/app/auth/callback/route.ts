@@ -101,6 +101,13 @@ export async function GET(req: NextRequest) {
     displayName,
   })
 
-  // === Step 5: Redirect to home (cookies are set on res) ===
-  return res
+  // === Step 5: Redirect to claim-profile (not home) ===
+  // After Google OAuth, redirect to the claim-profile page where users
+  // can enter their NIM. If they already have a student linked, the
+  // claim page will detect it and show "sudah ter-link" message.
+  // Override the redirect URL on the response object.
+  return NextResponse.redirect(`${origin}/#/claim-profile`, {
+    headers: res.headers,
+    status: 302,
+  })
 }
