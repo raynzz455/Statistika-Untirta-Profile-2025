@@ -8,21 +8,26 @@
 -- IDEMPOTENT: Safe to run multiple times. Drops existing policies
 -- before recreating them (DROP POLICY IF EXISTS).
 --
--- Bucket: `mahasiswa-photos` (private — uses signed URLs)
+-- Bucket: `mahasiswa-photos` (PUBLIC — student photos are meant to be
+-- visible to anyone viewing the public directory; using a stable public
+-- URL means photos stored in the DB never "expire" like signed URLs do.)
 -- ============================================================================
 
 -- ============================================================================
 -- 1. CREATE OR UPDATE STORAGE BUCKET
 -- ============================================================================
 -- Insert into storage.buckets (Supabase internal storage schema)
--- Bucket is PRIVATE (public = false) — signed URLs required for access
+-- Bucket is PUBLIC (public = true) — stable public URLs, no signed URLs needed.
+-- This is intentional: student photos in the directory are viewable by all
+-- visitors (the directory itself is a public page). For private data, create
+-- a separate private bucket.
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'mahasiswa-photos',
   'mahasiswa-photos',
-  false, -- private bucket — signed URLs required
-  5242880, -- 5 MB file size limit
-  ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+  true, -- PUBLIC bucket — stable public URLs (no expiry, no signed URLs)
+  8388608, -- 8 MB file size limit (matches frontend validation in ImageUploader)
+  ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/avif']
 )
 ON CONFLICT (id) DO UPDATE SET
   public = EXCLUDED.public,
@@ -35,6 +40,7 @@ ON CONFLICT (id) DO UPDATE SET
 -- Drop all policies we're about to create, in case they already exist
 -- from a previous run. This prevents error 42710 (duplicate_object).
 
+DROP POLICY IF EXISTS "Public read all uploads" ON storage.objects;
 DROP POLICY IF EXISTS "Users read own uploads" ON storage.objects;
 DROP POLICY IF EXISTS "Admins read all uploads" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated users upload to own folder" ON storage.objects;
@@ -48,20 +54,12 @@ DROP POLICY IF EXISTS "Admins delete any upload" ON storage.objects;
 -- 3. STORAGE POLICIES (READ)
 -- ============================================================================
 
--- Users can read their own uploads (via signed URL — owner only)
-CREATE POLICY "Users read own uploads"
+-- Public can read all uploads (bucket is public — anyone can view student photos)
+-- This is the key policy that makes public URLs work without authentication.
+CREATE POLICY "Public read all uploads"
   ON storage.objects FOR SELECT
   USING (
     bucket_id = 'mahasiswa-photos'
-    AND (auth.uid()::text = (storage.foldername(name))[1] OR public.is_admin())
-  );
-
--- Admins can read all uploads
-CREATE POLICY "Admins read all uploads"
-  ON storage.objects FOR SELECT
-  USING (
-    bucket_id = 'mahasiswa-photos'
-    AND public.is_admin()
   );
 
 -- ============================================================================
@@ -131,35 +129,13 @@ CREATE POLICY "Admins delete any upload"
 -- ============================================================================
 -- Verification:
 --   SELECT * FROM storage.buckets WHERE id = 'mahasiswa-photos';
+--   -- public column should be true
 --   SELECT * FROM storage.policies WHERE bucket_id = 'mahasiswa-photos';
---   -- OR: SELECT * FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects';
 --
 -- To test:
 --   1. Sign in as user A
---   2. Upload image → goes to /mahasiswa-photos/{userA-id}/{filename}
---   3. Try to read user B's image → should fail (signed URL only for owner)
---   4. Sign in as admin → can read all images
--- ============================================================================
-
--- ============================================================================
--- OPTIONAL: Public bucket for logos/svgs (if needed for public assets)
--- ============================================================================
--- INSERT INTO storage.buckets (id, name, public, allowed_mime_types)
--- VALUES (
---   'public-assets',
---   'public-assets',
---   true, -- public bucket
---   ARRAY['image/svg+xml', 'image/png', 'image/jpeg']
--- )
--- ON CONFLICT (id) DO NOTHING;
---
--- DROP POLICY IF EXISTS "Public read public-assets" ON storage.objects;
--- CREATE POLICY "Public read public-assets"
---   ON storage.objects FOR SELECT
---   USING (bucket_id = 'public-assets');
---
--- DROP POLICY IF EXISTS "Admin manage public-assets" ON storage.objects;
--- CREATE POLICY "Admin manage public-assets"
---   ON storage.objects FOR ALL
---   USING (bucket_id = 'public-assets' AND public.is_admin());
+--   2. Upload image via /api/upload → goes to mahasiswa-photos/{userA-id}/{filename}
+--   3. Open the returned public URL in incognito → should load (no auth required)
+--   4. Sign in as user B → cannot delete user A's image (RLS blocks it)
+--   5. Sign in as admin → can delete any image
 -- ============================================================================
