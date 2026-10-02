@@ -116,6 +116,16 @@ export function PlaceholderImage({
         src={src}
         alt={alt}
         loading={priority ? 'eager' : 'lazy'}
+        // referrerPolicy="no-referrer" — important for Supabase Storage.
+        // Some Supabase projects intermittently reject image GET requests
+        // that carry a Referer header from a different origin (returns 400
+        // "Invalid Referer" or just silently fails). Sending no Referer
+        // header makes the request work consistently. This is the #1 fix
+        // for "foto terkadang muncul terkadang tidak" intermittent loading.
+        referrerPolicy="no-referrer"
+        // crossOrigin NOT set — would actually BREAK the image because
+        // Supabase public storage doesn't send CORS headers by default,
+        // and img tags don't need CORS unless we read pixels via canvas.
         onLoad={() => setStatus('ok')}
         onError={() => setStatus('fallback-error')}
         className={cn(

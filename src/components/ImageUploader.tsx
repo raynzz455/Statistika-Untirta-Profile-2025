@@ -148,6 +148,10 @@ export function ImageUploader({
             <img
               src={value}
               alt={altText}
+              // referrerPolicy="no-referrer" — fixes intermittent load failures
+              // when serving from Supabase Storage. See PlaceholderImage.tsx
+              // for the full explanation.
+              referrerPolicy="no-referrer"
               className={cn('w-full h-full object-cover', grayscale && 'grayscale')}
               onError={(e) => {
                 // If image fails to load, show fallback

@@ -30,11 +30,28 @@ function detectUrlType(url: string | null | undefined): UrlInfo {
     return { type: 'spotify', embedUrl, trackId }
   }
 
-  // YouTube: https://www.youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID
-  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/i)
+  // YouTube + YouTube Music + YouTube Shorts
+  // Matches all of:
+  //   - https://www.youtube.com/watch?v=VIDEO_ID
+  //   - https://music.youtube.com/watch?v=VIDEO_ID  (YouTube Music)
+  //   - https://m.youtube.com/watch?v=VIDEO_ID      (mobile YouTube)
+  //   - https://youtu.be/VIDEO_ID                    (short URL)
+  //   - https://www.youtube.com/embed/VIDEO_ID       (embed URL)
+  //   - https://www.youtube.com/shorts/VIDEO_ID     (Shorts)
+  //   - https://music.youtube.com/embed/VIDEO_ID     (YouTube Music embed)
+  // Video ID is always 11 chars [a-zA-Z0-9_-]
+  // Embed URL is the same for all YouTube variants (works for music + regular)
+  const ytMatch = url.match(
+    /(?:youtu\.be\/|[a-z]*\.?youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/i
+  )
   if (ytMatch) {
     const videoId = ytMatch[1]
-    const embedUrl = `https://www.youtube.com/embed/${videoId}`
+    // Use youtube-nocookie.com for privacy-enhanced mode (still works for music + regular)
+    // If user pasted a music.youtube.com URL, the embed still works — YouTube Music
+    // videos are regular YouTube videos under the hood.
+    const isMusicUrl = url.toLowerCase().includes('music.youtube.com')
+    const embedUrl = `https://www.youtube.com/embed/${videoId}` +
+      (isMusicUrl ? '?utm_source=music' : '')
     return { type: 'youtube', embedUrl, trackId: videoId }
   }
 

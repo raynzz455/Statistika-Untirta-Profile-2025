@@ -310,10 +310,10 @@ export function SettingsView() {
               </div>
               <div className="border border-[var(--brand-border)] bg-[var(--brand-surface-2)] p-2">
                 <p className="font-condensed uppercase tracking-widest text-[#FF0000] mb-0.5 flex items-center gap-1">
-                  <Youtube className="w-3 h-3" /> YouTube
+                  <Youtube className="w-3 h-3" /> YouTube / Music
                 </p>
                 <p className="text-[9px] text-[var(--brand-ink-muted)] font-mono truncate">
-                  youtu.be/... atau watch?v=...
+                  youtube.com/watch?v= atau music.youtube.com
                 </p>
               </div>
               <div className="border border-[var(--brand-border)] bg-[var(--brand-surface-2)] p-2">

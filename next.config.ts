@@ -56,6 +56,21 @@ const nextConfig: NextConfig = {
               "font-src 'self' data:",
               // Allow XHR/fetch to self and Supabase API
               "connect-src 'self' https://*.supabase.co https://api.supabase.com",
+              // === frame-src — allow iframe embeds for MusicPlayer ===
+              // Without this, frame-src falls back to default-src 'self' which
+              // blocks ALL cross-origin iframes. Spotify/YouTube embeds fail
+              // with "Framing 'https://open.spotify.com/' violates the following
+              // Content Security Policy directive: default-src 'self'".
+              //
+              // Allowed embed origins:
+              //   - https://open.spotify.com       (Spotify track/album/playlist embeds)
+              //   - https://www.youtube.com      (YouTube watch/embed)
+              //   - https://www.youtube-nocookie.com  (YouTube privacy-enhanced mode)
+              //   - https://music.youtube.com     (YouTube Music — same embed domain)
+              //   - https://w.soundcloud.com      (SoundCloud embeds)
+              //   - https://bandcamp.com          (Bandcamp album embeds)
+              //   - https://player.vimeo.com      (Vimeo embeds — bonus)
+              "frame-src 'self' https://open.spotify.com https://www.youtube.com https://www.youtube-nocookie.com https://music.youtube.com https://w.soundcloud.com https://bandcamp.com https://player.vimeo.com",
               // Allow form submissions only to self
               "form-action 'self'",
               // Allow base tag only from self
@@ -63,6 +78,7 @@ const nextConfig: NextConfig = {
               // Block object/embed tags
               "object-src 'none'",
               // Frame-ancestors none = same as X-Frame-Options: DENY
+              // (prevents OTHER sites from embedding US — doesn't affect our iframes)
               "frame-ancestors 'none'",
             ].join("; "),
           },
