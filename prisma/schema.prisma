@@ -399,3 +399,18 @@ model Aspirasi {
   @@index([category, approved])
   @@map("aspirasi")
 }
+
+// Subscriber — email subscriptions for angkatan updates
+// Users enter their email on the home page "Berlangganan Info Angkatan" form.
+// No login required — anyone (including alumni, dosen, parents) can subscribe.
+// Admin can view the subscriber list and send bulk emails manually.
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?  // optional — for personalization
+  active    Boolean  @default(true) // can unsubscribe (set to false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("subscribers")
+}

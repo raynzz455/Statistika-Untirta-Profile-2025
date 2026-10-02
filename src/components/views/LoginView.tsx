@@ -205,6 +205,18 @@ export function LoginView() {
               Masuk dengan Google
             </a>
 
+            {/* Signup link */}
+            <p className="text-center text-xs font-body text-[var(--brand-ink-muted)] mt-3">
+              Belum punya akun?{' '}
+              <button
+                type="button"
+                onClick={() => setView('signup')}
+                className="text-[var(--brand-navy)] underline hover:no-underline font-bold"
+              >
+                Daftar akun baru →
+              </button>
+            </p>
+
             {/* Divider */}
             <div className="flex items-center gap-3 my-5">
               <span className="h-px bg-[var(--brand-border)] flex-grow" />

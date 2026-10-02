@@ -15,6 +15,7 @@ import { ArticleDetailView } from '@/components/views/ArticleDetailView'
 import { EventsView } from '@/components/views/EventsView'
 import { AboutView } from '@/components/views/AboutView'
 import { LoginView } from '@/components/views/LoginView'
+import { SignupView } from '@/components/views/SignupView'
 import { AdminView } from '@/components/views/AdminView'
 import { SettingsView } from '@/components/views/SettingsView'
 import { MemberProfileView } from '@/components/views/MemberProfileView'
@@ -29,7 +30,7 @@ import type { ViewName } from '@/lib/store'
 
 const VALID_VIEWS: ViewName[] = [
   'home', 'directory', 'profile', 'classes', 'gallery',
-  'articles', 'article-detail', 'events', 'about', 'login', 'admin', 'settings', 'member-profile',
+  'articles', 'article-detail', 'events', 'about', 'login', 'signup', 'admin', 'settings', 'member-profile',
   'series', 'series-detail', 'dosen-detail', 'aspirasi', 'claim-profile',
 ]
 
@@ -128,6 +129,8 @@ export default function Home() {
         return <AboutView />
       case 'login':
         return user ? <SettingsView /> : <LoginView />
+      case 'signup':
+        return user ? <SettingsView /> : <SignupView />
       case 'admin':
         return <AdminView />
       case 'settings':

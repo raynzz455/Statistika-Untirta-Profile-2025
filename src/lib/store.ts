@@ -11,6 +11,7 @@ export type ViewName =
   | 'articles'
   | 'about'
   | 'login'
+  | 'signup'
   | 'admin'
   | 'settings'
   | 'events'
