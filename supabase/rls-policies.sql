@@ -40,7 +40,7 @@
 -- Mirrors auth.users. Auto-populated via trigger when user signs up via
 -- Supabase Auth (Google, GitHub, email, etc.).
 CREATE TABLE IF NOT EXISTS public.profiles (
-  id           UUID PRIMARY KEY -- no FK to auth.users (avoids Prisma P4002 error),
+  id           UUID PRIMARY KEY, -- no FK to auth.users (avoids Prisma P4002 error)
   username     TEXT UNIQUE,
   role         TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
   display_name TEXT,
