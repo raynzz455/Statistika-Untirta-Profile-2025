@@ -23,6 +23,32 @@ interface Event {
   recurrenceEndDate?: string | null
 }
 
+// ============================================================================
+// Date formatting helpers
+// ============================================================================
+// The schema stores startDate/endDate as String (ISO format from
+// datetime-local input: "2025-10-28T08:00"). We format to a friendly
+// Indonesian display: "28 Okt 2025, 08:00 WIB".
+// Falls back gracefully if the string is already a display format
+// (legacy data: "28 Okt 2025, 08:00") — just shows it as-is.
+
+function formatEventDate(raw: string | null | undefined): string {
+  if (!raw) return ''
+  // Try parsing as ISO (from datetime-local input)
+  const d = new Date(raw)
+  if (!isNaN(d.getTime())) {
+    return d.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }) + ' WIB'
+  }
+  // Fallback: show the raw string (legacy data or user-typed)
+  return raw
+}
+
 const CATEGORIES = ['Akademik', 'Sosial', 'Olahraga', 'Lomba', 'Workshop']
 
 export function EventsView() {
@@ -46,9 +72,11 @@ export function EventsView() {
 
   const load = () => {
     setLoading(true)
-    fetch('/api/events')
+    // cache: 'no-store' — bypass browser cache so events list always
+    // shows fresh data after a user creates/edits an event.
+    fetch('/api/events', { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => setEvents(d.events || []))
+      .then((d) => setEvents(Array.isArray(d.events) ? d.events : []))
       .catch(() => setEvents([]))
       .finally(() => setLoading(false))
   }
@@ -207,23 +235,21 @@ export function EventsView() {
               />
             </div>
             <div>
-              <label className="block text-xs font-condensed uppercase font-bold mb-1">Mulai (display)</label>
+              <label className="block text-xs font-condensed uppercase font-bold mb-1">Mulai</label>
               <input
-                type="text"
+                type="datetime-local"
                 value={form.startDate}
                 onChange={(e) => setForm({ ...form, startDate: e.target.value })}
                 className="w-full border border-[var(--brand-ink)] p-2 text-sm bg-[var(--brand-surface)]"
-                placeholder="28 Okt 2025, 08:00"
               />
             </div>
             <div>
               <label className="block text-xs font-condensed uppercase font-bold mb-1">Selesai (opsional)</label>
               <input
-                type="text"
+                type="datetime-local"
                 value={form.endDate}
                 onChange={(e) => setForm({ ...form, endDate: e.target.value })}
                 className="w-full border border-[var(--brand-ink)] p-2 text-sm bg-[var(--brand-surface)]"
-                placeholder="08 Nov 2025, 16:00"
               />
             </div>
             <div>
@@ -375,8 +401,8 @@ export function EventsView() {
                 )}
                 <div className="flex flex-wrap gap-4 text-xs text-[var(--brand-ink-muted)] mt-auto">
                   <span className="inline-flex items-center gap-1">
-                    <Calendar className="w-3 h-3" /> {e.startDate}
-                    {e.endDate && ` – ${e.endDate}`}
+                    <Calendar className="w-3 h-3" /> {formatEventDate(e.startDate)}
+                    {e.endDate && ` – ${formatEventDate(e.endDate)}`}
                   </span>
                   {e.location && (
                     <span className="inline-flex items-center gap-1">

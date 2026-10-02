@@ -159,11 +159,14 @@ export function AspirasiView() {
 
   const load = () => {
     setLoading(true)
-    fetch('/api/aspirasi')
+    // cache: 'no-store' — bypass browser cache so aspirasi list always
+    // shows fresh data after submit/delete (was cached 15s + 60s SWR
+    // via withCache on the GET route — now removed).
+    fetch('/api/aspirasi', { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
-        setItems(d.items || [])
-        setStats(d.stats || [])
+        setItems(Array.isArray(d.items) ? d.items : [])
+        setStats(Array.isArray(d.stats) ? d.stats : [])
       })
       .catch(() => {
         setItems([])

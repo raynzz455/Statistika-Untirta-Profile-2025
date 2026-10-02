@@ -70,9 +70,13 @@ export function ArticlesView() {
 
   const load = () => {
     setLoading(true)
-    fetch(`/api/articles${user ? '?includeDrafts=1' : ''}`)
+    // cache: 'no-store' — bypass browser cache so articles list always
+    // shows fresh data after create/edit/delete.
+    // Also defensive: use Array.isArray() check in case response shape is
+    // unexpected (prevents "e.map is not a function" TypeError).
+    fetch(`/api/articles${user ? '?includeDrafts=1' : ''}`, { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => setArticles(d.articles || []))
+      .then((d) => setArticles(Array.isArray(d.articles) ? d.articles : []))
       .catch(() => setArticles([]))
       .finally(() => setLoading(false))
   }

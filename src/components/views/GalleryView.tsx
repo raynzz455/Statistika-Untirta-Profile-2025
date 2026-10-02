@@ -34,9 +34,11 @@ export function GalleryView() {
 
   const load = () => {
     setLoading(true)
-    fetch('/api/gallery')
+    // cache: 'no-store' — bypass browser cache so gallery always shows
+    // fresh photos after a user uploads new ones.
+    fetch('/api/gallery', { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => setItems(d.items || []))
+      .then((d) => setItems(Array.isArray(d.items) ? d.items : []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false))
   }
