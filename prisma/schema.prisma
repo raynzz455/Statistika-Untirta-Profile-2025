@@ -101,7 +101,38 @@ model Student {
   // Portfolio items (websites, projects, certificates)
   portfolios  StudentPortfolio[]
 
+  // Class history (rotation tracking)
+  classHistory StudentClassHistory[]
+
   @@map("students")
+}
+
+// Student Class History — tracks class assignment per semester
+// One record per student per semester. When rotation happens (sem 3 & 5),
+// a NEW record is added (not updating the old one) to preserve history.
+//
+// Example for student Ahmad Fauzi:
+//   semester 1, kelas A, year 2025/2026, is_current=true
+//   semester 2, kelas A, year 2025/2026
+//   semester 3, kelas B, year 2026/2027  (rotation!)
+//   semester 4, kelas B, year 2026/2027
+//   semester 5, kelas A, year 2027/2028  (rotation back!)
+//   semester 6, kelas A, year 2027/2028
+model StudentClassHistory {
+  id          String   @id @default(cuid())
+  studentId   String   @map("student_id")
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  semester    Int      // 1-8
+  kelas       String   // "A" | "B"
+  angkatan    String   @default("2025") // year of admission
+  academicYear String? @map("academic_year") // e.g. "2025/2026"
+  isCurrent   Boolean  @default(false) @map("is_current") // marks current semester
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([studentId, semester]) // one record per student per semester
+  @@index([studentId, semester])
+  @@index([kelas, semester])
+  @@map("student_class_history")
 }
 
 // Student Portfolio — supports 3 types:

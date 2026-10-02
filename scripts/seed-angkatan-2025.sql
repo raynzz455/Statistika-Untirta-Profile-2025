@@ -1,41 +1,35 @@
 -- ============================================================================
--- Statistika '25 — Seed Lengkap Angkatan 2025 (Nama + NIM saja)
+-- Statistika '25 — Seed Lengkap Angkatan 2025 + Class History
 -- ============================================================================
--- Script ini untuk import daftar LENGKAP mahasiswa angkatan 2025.
--- Hanya mengisi: nim + name + kelas + angkatan + semester
--- Field lain (tagline, bio, foto, lagu, portfolio) biarkan NULL —
--- mahasiswa akan isi sendiri setelah claim profil via NIM.
+-- Script ini:
+-- 1. Import daftar mahasiswa (nim + name + kelas + semester)
+-- 2. Inisialisasi class history (semester 1, kelas A/B)
+--
+-- Class history disimpan di tabel terpisah (student_class_history)
+-- supaya rotasi kelas (semester 3 & 5) TIDAK menghapus history sebelumnya.
 --
 -- CARA PAKAI:
--- 1. Edit nama mahasiswa di bawah dengan data asli angkatan Anda
--- 2. Copy seluruh SQL ini
--- 3. Paste di Supabase Dashboard → SQL Editor → New query
--- 4. Run
--- 5. Share link website ke grup WhatsApp angkatan
--- 6. Mahasiswa signup Google → claim profil via NIM → edit sendiri
---
--- FORMAT NIM: 333625XXXX (10 digit)
--- - Digit 1-3: 333 (kode prodi Statistika Untirta)
--- - Digit 4-5: 25 (tahun masuk 2025)
--- - Digit 6-10: nomor urut mahasiswa
+-- 1. Edit nama mahasiswa di bawah dengan data asli
+-- 2. Copy seluruh SQL → paste di Supabase SQL Editor → Run
+-- 3. Idempotent: ON CONFLICT DO NOTHING — aman dijalankan ulang
 -- ============================================================================
 
--- === OPSIONAL: Hapus data mahasiswa lama dulu (HATI-HATI!) ===
--- Kalau Anda ingin reset total daftar mahasiswa, uncomment baris ini:
+-- === OPSIONAL: Reset data mahasiswa lama ===
+-- Hanya uncomment kalau ingin bersih dari awal:
+-- DELETE FROM student_class_history WHERE student_id IN (SELECT id FROM students WHERE nim LIKE '333625%');
 -- DELETE FROM students WHERE nim LIKE '333625%';
--- PERINGATAN: ini akan menghapus SEMUA mahasiswa angkatan 2025, termasuk
--- yang sudah claim profil. Data foto, bio, portfolio yang sudah diisi
--- mahasiswa akan HILANG. Hanya run kalau Anda yakin!
 
--- === IMPORT MAHASISWA ANGKATAN 2025 ===
--- Edit nama di bawah dengan data asli mahasiswa Anda
--- Kelas A = 3336250001 - 3336250060 (atau sesuai pembagian)
--- Kelas B = 3336250061 - 3336250120 (atau sesuai pembagian)
+-- ============================================================================
+-- PART 1: IMPORT MAHASISWA (nim + name + kelas)
+-- ============================================================================
+-- Setiap mahasiswa hanya ADA SATU record di tabel students.
+-- Field kelas + semester menunjukkan kelas SAAT INI (current).
+-- History disimpan di tabel student_class_history (Part 2).
 
 INSERT INTO students (id, nim, name, kelas, angkatan, semester, "owner_id", email, "claimed_at", "created_at", "updated_at")
 VALUES
 
--- === KELAS A ===
+-- === KELAS A (semester 1) ===
 (gen_random_uuid()::text, '3336250001', 'Ahmad Fauzi', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
 (gen_random_uuid()::text, '3336250002', 'Budi Santoso', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
 (gen_random_uuid()::text, '3336250003', 'Citra Lestari', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
@@ -56,124 +50,84 @@ VALUES
 (gen_random_uuid()::text, '3336250018', 'Rizky Ramadhan', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
 (gen_random_uuid()::text, '3336250019', 'Siti Aminah', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
 (gen_random_uuid()::text, '3336250020', 'Taufik Hidayat', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250021', 'Umar Bakri', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250022', 'Vina Melati', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250023', 'Wawan Setiawan', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250024', 'Xena Paramita', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250025', 'Yusuf Maulana', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250026', 'Zahra Aulia', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250027', 'Ade Kurniawan', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250028', 'Bayu Saputra', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250029', 'Candra Wijaya', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250030', 'Dewi Lestari', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250031', 'Eka Putri', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250032', 'Fajar Nugroho', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250033', 'Gita Anggraini', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250034', 'Hadi Kusuma', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250035', 'Intan Permata', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250036', 'Jihan Aulia', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250037', 'Krisna Adi', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250038', 'Laras Wulandari', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250039', 'Mahesa Pratama', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250040', 'Nadia Safitri', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250041', 'Oki Setiawan', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250042', 'Priya Maharani', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250043', 'Rendi Kurnia', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250044', 'Sari Wendari', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250045', 'Tegar Prasetya', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250046', 'Ulfa Rahmawati', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250047', 'Vito Anggara', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250048', 'Winda Permatasari', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250049', 'Yudi Hartono', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250050', 'Zaki Mubarok', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250051', 'Andi Firmansyah', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250052', 'Betari Cahya', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250053', 'Dimas Aditya', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250054', 'Elsa Putri', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250055', 'Fauzan Akbar', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250056', 'Guntur Pratama', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250057', 'Hilda Marcela', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250058', 'Iqbal Maulana', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250059', 'Jelita Sari', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250060', 'Khalif Mauludi', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
 
--- === KELAS B ===
-(gen_random_uuid()::text, '3336250061', 'Larasati Dewi', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250062', 'Muhammad Aldi', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250063', 'Nabila Az-Zahra', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250064', 'Oscar Mahendra', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250065', 'Pratiwi Ningrum', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250066', 'Qadri Hasballah', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250067', 'Rahmat Hidayat', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250068', 'Salsabila Putri', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250069', 'Tirta Amerta', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250070', 'Ulul Albab', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250071', 'Vera Anggita', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250072', 'Wahyu Pradana', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250073', 'Yasmin Zahratul', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250074', 'Zainal Abidin', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250075', 'Aria Wibowo', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250076', 'Bunga Citra', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250077', 'Cakra Negara', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250078', 'Dara Anjani', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250079', 'Elang Pratama', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250080', 'Fardila Najwa', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250081', 'Gani Irwansyah', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250082', 'Hesti Wulandari', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250083', 'Iqbal Pratama', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250084', 'Junita Br. Sembiring', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250085', 'Kurnia Ekawati', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250086', 'Lukman Akbar', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250087', 'Mega Lestari', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250088', 'Nizar Yazid', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250089', 'Olivia Sukma', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250090', 'Pandu Raga', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250091', 'Qori Amalina', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250092', 'Raka Pradipta', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250093', 'Sasti Widyastuti', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250094', 'Toni Saputra', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250095', 'Umar Faruq', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250096', 'Vivi Oktaviani', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250097', 'Wahidin Putra', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250098', 'Yulianingsih', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250099', 'Zulfikar Akbar', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250100', 'Ahmad Zaki', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250101', 'Bima Sakti', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250102', 'Cici Purnama', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250103', 'Dicky Asmara', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250104', 'Elvira Safa', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250105', 'Fadli Rahman', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250106', 'Gilang Pratama', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250107', 'Hafizh Anwar', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250108', 'Ika Pratiwi', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250109', 'Joko Prabowo', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250110', 'Kartika Sari', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250111', 'Lingga Bagus', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250112', 'Mira Anggraini', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250113', 'Naufal Hakim', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250114', 'Olivia Sari', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250115', 'Pandu Wijaya', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250116', 'Rangga Adi', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250117', 'Satria Buana', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250118', 'Tiara Maharani', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250119', 'Unggul Pratama', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
-(gen_random_uuid()::text, '3336250120', 'Vicky Apriana', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW())
+-- === KELAS B (semester 1) ===
+(gen_random_uuid()::text, '3336250021', 'Umar Bakri', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250022', 'Vina Melati', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250023', 'Wawan Setiawan', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250024', 'Xena Paramita', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250025', 'Yusuf Maulana', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250026', 'Zahra Aulia', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250027', 'Ade Kurniawan', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250028', 'Bayu Saputra', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250029', 'Candra Wijaya', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250030', 'Dewi Lestari', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250031', 'Eka Putri', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250032', 'Fajar Nugroho', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250033', 'Gita Anggraini', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250034', 'Hadi Kusuma', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250035', 'Intan Permata', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250036', 'Jihan Aulia', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250037', 'Krisna Adi', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250038', 'Laras Wulandari', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250039', 'Mahesa Pratama', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+(gen_random_uuid()::text, '3336250040', 'Nadia Safitri', 'B', '2025', 1, NULL, NULL, NULL, NOW(), NOW())
 
--- === TAMBAH/EDIT MAHASISWA LAIN DI SINI ===
--- Copy baris di atas, ganti NIM + nama:
--- (gen_random_uuid()::text, '3336250121', 'Nama Mahasiswa Baru', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
+-- === TAMBAH MAHASISWA LAIN DI SINI ===
+-- Copy baris, ganti NIM + nama:
+-- (gen_random_uuid()::text, '3336250041', 'Nama Mahasiswa', 'A', '2025', 1, NULL, NULL, NULL, NOW(), NOW()),
 
 ON CONFLICT (nim) DO NOTHING;
 
--- === VERIFIKASI ===
--- Total mahasiswa per kelas:
-SELECT kelas, COUNT(*) as jumlah FROM students GROUP BY kelas ORDER BY kelas;
+-- ============================================================================
+-- PART 2: INISIALISASI CLASS HISTORY (semester 1)
+-- ============================================================================
+-- Buat record history untuk semester 1 (kelas saat ini).
+-- Saat rotasi kelas terjadi (semester 3 & 5), tambahkan record BARU
+-- (jangan update yang lama!) supaya history terjaga.
 
--- Total semua:
+INSERT INTO student_class_history (id, student_id, semester, kelas, angkatan, academic_year, is_current, created_at)
+SELECT
+  gen_random_uuid()::text,
+  s.id,
+  s.semester,           -- semester 1
+  s.kelas,              -- kelas A atau B
+  s.angkatan,           -- 2025
+  '2025/2026',          -- academic year
+  true,                 -- is_current = true (semester saat ini)
+  NOW()
+FROM students s
+WHERE s.nim LIKE '333625%'
+  AND NOT EXISTS (
+    SELECT 1 FROM student_class_history sch
+    WHERE sch.student_id = s.id AND sch.semester = s.semester
+  );
+
+-- ============================================================================
+-- VERIFY
+-- ============================================================================
+
+-- Total mahasiswa:
 SELECT COUNT(*) as total_mahasiswa FROM students;
 
+-- Mahasiswa per kelas:
+SELECT kelas, COUNT(*) as jumlah FROM students GROUP BY kelas ORDER BY kelas;
+
+-- Class history records:
+SELECT semester, kelas, COUNT(*) as jumlah
+FROM student_class_history
+GROUP BY semester, kelas
+ORDER BY semester, kelas;
+
 -- Yang sudah claim profil:
--- SELECT COUNT(*) as sudah_claim FROM students WHERE "owner_id" IS NOT NULL;
+-- SELECT COUNT(*) as sudah_claim FROM students WHERE owner_id IS NOT NULL;
 
 -- Yang belum claim:
--- SELECT COUNT(*) as belum_claim FROM students WHERE "owner_id" IS NULL;
+-- SELECT COUNT(*) as belum_claim FROM students WHERE owner_id IS NULL;
+
+-- Lihat history lengkap satu mahasiswa:
+-- SELECT sch.semester, sch.kelas, sch.academic_year, sch.is_current
+-- FROM student_class_history sch
+-- JOIN students s ON s.id = sch.student_id
+-- WHERE s.nim = '3336250001'
+-- ORDER BY sch.semester;
