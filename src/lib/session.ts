@@ -50,10 +50,14 @@ export async function getSession(): Promise<SessionPayload | null> {
     const decoded = JSON.parse(Buffer.from(payload, 'base64').toString('utf-8')) as SessionPayload
     // Check expiry
     if (Date.now() - decoded.issuedAt > SESSION_MAX_AGE * 1000) return null
-    // Verify user still exists
-    const user = await db.user.findUnique({ where: { id: decoded.userId } })
-    if (!user) return null
-    return { ...decoded, role: user.role as 'admin' | 'user', displayName: user.displayName }
+    // Return session payload directly — cookie is already signed + verified.
+    // NO DB LOOKUP: Google OAuth users have userId = Supabase UUID,
+    // which is NOT in the Prisma users table. Doing db.user.findUnique
+    // would return null and reject Google OAuth users as "not logged in".
+    // The role in the cookie is set at login time (from profiles table
+    // via the callback handler). To refresh role after SQL UPDATE,
+    // user logs out + logs in again (standard behavior).
+    return decoded
   } catch {
     return null
   }
