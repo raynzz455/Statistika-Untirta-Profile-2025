@@ -63,7 +63,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session) {
-    return NextResponse.json({ error: 'Anda harus login.' }, { status: 401 })
+    return NextResponse.json(
+      { error: 'Anda harus login.' },
+      { status: 401, headers: { 'Cache-Control': 'no-store' } }
+    )
   }
 
   try {
@@ -78,7 +81,10 @@ export async function POST(req: NextRequest) {
     const imageUrl = body?.imageUrl ? String(body.imageUrl).trim() : null
 
     if (!title || !excerpt) {
-      return NextResponse.json({ error: 'Judul dan ringkasan wajib diisi.' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Judul dan ringkasan wajib diisi.' },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } }
+      )
     }
 
     const article = await db.article.create({
@@ -93,9 +99,24 @@ export async function POST(req: NextRequest) {
         authorId: session.userId,
       },
     })
-    return NextResponse.json({ article })
-  } catch (e) {
-    console.error('[articles POST] error', e)
-    return NextResponse.json({ error: 'Gagal membuat artikel.' }, { status: 500 })
+    return NextResponse.json(
+      { article, ok: true },
+      { headers: { 'Cache-Control': 'no-store' } }
+    )
+  } catch (e: any) {
+    const errMsg = e?.message?.slice(0, 200) || 'unknown error'
+    console.error('[articles POST] error:', errMsg)
+
+    // Detect FK violation on author_id → user must run the SQL script
+    const isFkViolation = e?.code === 'P2003' || /foreign key/i.test(errMsg)
+    return NextResponse.json(
+      {
+        error: isFkViolation
+          ? 'Gagal membuat artikel: constraint FK masih ada. Jalankan scripts/drop-all-user-fk-constraints.sql di Supabase SQL Editor.'
+          : 'Gagal membuat artikel. Coba lagi atau hubungi admin.',
+        detail: process.env.NODE_ENV === 'development' ? errMsg : undefined,
+      },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } }
+    )
   }
 }
