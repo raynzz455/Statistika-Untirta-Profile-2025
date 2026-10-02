@@ -144,21 +144,25 @@ $$;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
 -- Users can read their own profile
+DROP POLICY IF EXISTS "Users can read own profile" ON profiles;
 CREATE POLICY "Users can read own profile"
   ON profiles FOR SELECT
   USING (auth.uid() = id OR public.is_admin());
 
 -- Users can update their own profile (but not role)
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 CREATE POLICY "Users can update own profile"
   ON profiles FOR UPDATE
   USING (auth.uid() = id);
 
 -- Only admins can insert new profiles (auto-trigger handles normal signup)
+DROP POLICY IF EXISTS "Admins can insert profiles" ON profiles;
 CREATE POLICY "Admins can insert profiles"
   ON profiles FOR INSERT
   WITH CHECK (public.is_admin());
 
 -- Only admins can delete profiles
+DROP POLICY IF EXISTS "Admins can delete profiles" ON profiles;
 CREATE POLICY "Admins can delete profiles"
   ON profiles FOR DELETE
   USING (public.is_admin());
@@ -168,18 +172,22 @@ CREATE POLICY "Admins can delete profiles"
 -- ============================================================================
 ALTER TABLE students ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read students" ON students;
 CREATE POLICY "Public read students"
   ON students FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Owner can update own student profile" ON students;
 CREATE POLICY "Owner can update own student profile"
   ON students FOR UPDATE
   USING (public.is_owner(owner_id) OR public.is_admin());
 
+DROP POLICY IF EXISTS "Authenticated can create student profile" ON students;
 CREATE POLICY "Authenticated can create student profile"
   ON students FOR INSERT
   WITH CHECK (auth.uid() IS NOT NULL);
 
+DROP POLICY IF EXISTS "Admin can delete student" ON students;
 CREATE POLICY "Admin can delete student"
   ON students FOR DELETE
   USING (public.is_admin());
@@ -189,18 +197,22 @@ CREATE POLICY "Admin can delete student"
 -- ============================================================================
 ALTER TABLE articles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read published articles" ON articles;
 CREATE POLICY "Public read published articles"
   ON articles FOR SELECT
   USING (published = true OR public.is_admin() OR public.is_owner(author_id));
 
+DROP POLICY IF EXISTS "Authors can create articles" ON articles;
 CREATE POLICY "Authors can create articles"
   ON articles FOR INSERT
   WITH CHECK (public.is_owner(author_id) OR public.is_admin());
 
+DROP POLICY IF EXISTS "Authors can update own articles" ON articles;
 CREATE POLICY "Authors can update own articles"
   ON articles FOR UPDATE
   USING (public.is_owner(author_id) OR public.is_admin());
 
+DROP POLICY IF EXISTS "Authors/admins can delete articles" ON articles;
 CREATE POLICY "Authors/admins can delete articles"
   ON articles FOR DELETE
   USING (public.is_owner(author_id) OR public.is_admin());
@@ -210,20 +222,24 @@ CREATE POLICY "Authors/admins can delete articles"
 -- ============================================================================
 ALTER TABLE series ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read series" ON series;
 CREATE POLICY "Public read series"
   ON series FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Creator can manage series" ON series;
 CREATE POLICY "Creator can manage series"
   ON series FOR ALL
   USING (public.is_owner(creator_id) OR public.is_admin());
 
 ALTER TABLE series_items ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read series_items" ON series_items;
 CREATE POLICY "Public read series_items"
   ON series_items FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Creator can manage series_items" ON series_items;
 CREATE POLICY "Creator can manage series_items"
   ON series_items FOR ALL
   USING (public.is_admin()); -- Simplified: only admin manages series items
@@ -233,10 +249,12 @@ CREATE POLICY "Creator can manage series_items"
 -- ============================================================================
 ALTER TABLE dosen ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read dosen" ON dosen;
 CREATE POLICY "Public read dosen"
   ON dosen FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Admin full access dosen" ON dosen;
 CREATE POLICY "Admin full access dosen"
   ON dosen FOR ALL
   USING (public.is_admin());
@@ -246,20 +264,24 @@ CREATE POLICY "Admin full access dosen"
 -- ============================================================================
 ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read tags" ON tags;
 CREATE POLICY "Public read tags"
   ON tags FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Admin manage tags" ON tags;
 CREATE POLICY "Admin manage tags"
   ON tags FOR ALL
   USING (public.is_admin());
 
 ALTER TABLE article_tags ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read article_tags" ON article_tags;
 CREATE POLICY "Public read article_tags"
   ON article_tags FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Admin manage article_tags" ON article_tags;
 CREATE POLICY "Admin manage article_tags"
   ON article_tags FOR ALL
   USING (public.is_admin());
@@ -269,10 +291,12 @@ CREATE POLICY "Admin manage article_tags"
 -- ============================================================================
 ALTER TABLE bookmarks ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users read own bookmarks" ON bookmarks;
 CREATE POLICY "Users read own bookmarks"
   ON bookmarks FOR SELECT
   USING (public.is_owner(user_id) OR public.is_admin());
 
+DROP POLICY IF EXISTS "Users manage own bookmarks" ON bookmarks;
 CREATE POLICY "Users manage own bookmarks"
   ON bookmarks FOR ALL
   USING (public.is_owner(user_id))
@@ -280,10 +304,12 @@ CREATE POLICY "Users manage own bookmarks"
 
 ALTER TABLE likes ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read likes" ON likes;
 CREATE POLICY "Public read likes"
   ON likes FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Users manage own likes" ON likes;
 CREATE POLICY "Users manage own likes"
   ON likes FOR ALL
   USING (public.is_owner(user_id))
@@ -294,20 +320,24 @@ CREATE POLICY "Users manage own likes"
 -- ============================================================================
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read events" ON events;
 CREATE POLICY "Public read events"
   ON events FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Organizer can manage own events" ON events;
 CREATE POLICY "Organizer can manage own events"
   ON events FOR ALL
   USING (public.is_owner(organizer_id) OR public.is_admin());
 
 ALTER TABLE rsvps ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users read own rsvps" ON rsvps;
 CREATE POLICY "Users read own rsvps"
   ON rsvps FOR SELECT
   USING (public.is_owner(user_id) OR public.is_admin());
 
+DROP POLICY IF EXISTS "Users manage own rsvps" ON rsvps;
 CREATE POLICY "Users manage own rsvps"
   ON rsvps FOR ALL
   USING (public.is_owner(user_id))
@@ -318,14 +348,17 @@ CREATE POLICY "Users manage own rsvps"
 -- ============================================================================
 ALTER TABLE gallery ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read gallery" ON gallery;
 CREATE POLICY "Public read gallery"
   ON gallery FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Uploader can create gallery items" ON gallery;
 CREATE POLICY "Uploader can create gallery items"
   ON gallery FOR INSERT
   WITH CHECK (public.is_owner(uploader_id) OR public.is_admin());
 
+DROP POLICY IF EXISTS "Uploader/admin can delete gallery items" ON gallery;
 CREATE POLICY "Uploader/admin can delete gallery items"
   ON gallery FOR DELETE
   USING (public.is_owner(uploader_id) OR public.is_admin());
@@ -335,14 +368,17 @@ CREATE POLICY "Uploader/admin can delete gallery items"
 -- ============================================================================
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read comments" ON comments;
 CREATE POLICY "Public read comments"
   ON comments FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Authenticated can comment" ON comments;
 CREATE POLICY "Authenticated can comment"
   ON comments FOR INSERT
   WITH CHECK (public.is_owner(user_id));
 
+DROP POLICY IF EXISTS "Author/admin can delete comments" ON comments;
 CREATE POLICY "Author/admin can delete comments"
   ON comments FOR DELETE
   USING (public.is_owner(user_id) OR public.is_admin());
@@ -352,10 +388,12 @@ CREATE POLICY "Author/admin can delete comments"
 -- ============================================================================
 ALTER TABLE follows ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read follows" ON follows;
 CREATE POLICY "Public read follows"
   ON follows FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Users manage own follows" ON follows;
 CREATE POLICY "Users manage own follows"
   ON follows FOR ALL
   USING (public.is_owner(follower_id))
@@ -366,18 +404,22 @@ CREATE POLICY "Users manage own follows"
 -- ============================================================================
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users read own notifications" ON notifications;
 CREATE POLICY "Users read own notifications"
   ON notifications FOR SELECT
   USING (public.is_owner(recipient_id) OR public.is_admin());
 
+DROP POLICY IF EXISTS "Users update own notifications" ON notifications;
 CREATE POLICY "Users update own notifications"
   ON notifications FOR UPDATE
   USING (public.is_owner(recipient_id));
 
+DROP POLICY IF EXISTS "Authenticated can trigger notifications" ON notifications;
 CREATE POLICY "Authenticated can trigger notifications"
   ON notifications FOR INSERT
   WITH CHECK (auth.uid() IS NOT NULL);
 
+DROP POLICY IF EXISTS "Admin can delete notifications" ON notifications;
 CREATE POLICY "Admin can delete notifications"
   ON notifications FOR DELETE
   USING (public.is_admin());
@@ -387,18 +429,22 @@ CREATE POLICY "Admin can delete notifications"
 -- ============================================================================
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users read own messages (sent/received)" ON messages;
 CREATE POLICY "Users read own messages (sent/received)"
   ON messages FOR SELECT
   USING (public.is_owner(sender_id) OR public.is_owner(recipient_id) OR public.is_admin());
 
+DROP POLICY IF EXISTS "Users send messages" ON messages;
 CREATE POLICY "Users send messages"
   ON messages FOR INSERT
   WITH CHECK (public.is_owner(sender_id));
 
+DROP POLICY IF EXISTS "Recipients can update read status" ON messages;
 CREATE POLICY "Recipients can update read status"
   ON messages FOR UPDATE
   USING (public.is_owner(recipient_id));
 
+DROP POLICY IF EXISTS "Admin can delete messages" ON messages;
 CREATE POLICY "Admin can delete messages"
   ON messages FOR DELETE
   USING (public.is_admin());
@@ -409,22 +455,26 @@ CREATE POLICY "Admin can delete messages"
 ALTER TABLE aspirasi ENABLE ROW LEVEL SECURITY;
 
 -- Public can read APPROVED aspirasi (anonymous submissions — no auth check)
+DROP POLICY IF EXISTS "Public read approved aspirasi" ON aspirasi;
 CREATE POLICY "Public read approved aspirasi"
   ON aspirasi FOR SELECT
   USING (approved = true);
 
 -- Admin can read ALL aspirasi (including unapproved)
+DROP POLICY IF EXISTS "Admin read all aspirasi" ON aspirasi;
 CREATE POLICY "Admin read all aspirasi"
   ON aspirasi FOR SELECT
   USING (public.is_admin());
 
 -- Anyone (even unauthenticated) can submit aspirasi — this is by design
 -- (anonymous feedback feature). Rate limiting enforced at app layer.
+DROP POLICY IF EXISTS "Anyone can submit aspirasi" ON aspirasi;
 CREATE POLICY "Anyone can submit aspirasi"
   ON aspirasi FOR INSERT
   WITH CHECK (true);
 
 -- Admin can update (approve/hide) and delete
+DROP POLICY IF EXISTS "Admin manage aspirasi" ON aspirasi;
 CREATE POLICY "Admin manage aspirasi"
   ON aspirasi FOR ALL
   USING (public.is_admin());
@@ -434,10 +484,12 @@ CREATE POLICY "Admin manage aspirasi"
 -- ============================================================================
 ALTER TABLE student_portfolios ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read student_portfolios" ON student_portfolios;
 CREATE POLICY "Public read student_portfolios"
   ON student_portfolios FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Admin manage student_portfolios" ON student_portfolios;
 CREATE POLICY "Admin manage student_portfolios"
   ON student_portfolios FOR ALL
   USING (public.is_admin());
@@ -451,10 +503,12 @@ CREATE POLICY "Admin manage student_portfolios"
 -- (which stores Supabase Auth users).
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admin read users" ON users;
 CREATE POLICY "Admin read users"
   ON users FOR SELECT
   USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Admin manage users" ON users;
 CREATE POLICY "Admin manage users"
   ON users FOR ALL
   USING (public.is_admin());
@@ -464,10 +518,12 @@ CREATE POLICY "Admin manage users"
 -- ============================================================================
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admin read audit_log" ON audit_log;
 CREATE POLICY "Admin read audit_log"
   ON audit_log FOR SELECT
   USING (public.is_admin());
 
+DROP POLICY IF EXISTS "System insert audit_log" ON audit_log;
 CREATE POLICY "System insert audit_log"
   ON audit_log FOR INSERT
   WITH CHECK (auth.uid() IS NOT NULL OR public.is_admin());
