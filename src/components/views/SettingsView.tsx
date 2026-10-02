@@ -13,6 +13,7 @@ export function SettingsView() {
   const setView = useAppStore((s) => s.setView)
   const [profile, setProfile] = useState({
     name: '',
+    nickname: '',
     tagline: 'Mencari makna di balik data.',
     bio: 'Saya adalah mahasiswa Statistika Untirta yang sedang belajar.',
     instagram: '',
@@ -40,6 +41,7 @@ export function SettingsView() {
           setStudentId(mine.id)
           setProfile({
             name: mine.name,
+            nickname: mine.nickname || '',
             tagline: mine.tagline || '',
             bio: mine.bio || '',
             instagram: mine.instagram || '',
@@ -90,6 +92,7 @@ export function SettingsView() {
         // cache: 'no-store' ensures the PUT itself isn't cached (defensive)
         cache: 'no-store',
         body: JSON.stringify({
+          nickname: profile.nickname, // panggilan — tampil di pojok kanan atas kartu direktori
           tagline: profile.tagline,
           bio: profile.bio,
           instagram: profile.instagram,
@@ -133,8 +136,8 @@ export function SettingsView() {
           </div>
         )}
 
-        <div className="flex flex-col md:flex-row gap-6 items-start">
-          <div className="w-32 h-32 flex-shrink-0 border border-[var(--brand-ink)] bg-[var(--brand-surface-2)] relative overflow-hidden">
+        <div className="flex flex-col md:flex-row gap-6 md:items-start">
+          <div className="w-32 h-32 flex-shrink-0 border border-[var(--brand-ink)] bg-[var(--brand-surface-2)] relative overflow-hidden self-center md:self-auto">
             <PlaceholderImage
               alt="Foto Profil"
               src={profile.imageUrl || undefined}
@@ -144,7 +147,16 @@ export function SettingsView() {
               <ImageIcon className="w-5 h-5 text-white opacity-0 hover:opacity-100" />
             </div>
           </div>
-          <div className="flex-grow w-full flex flex-col gap-4">
+          {/* BUG FIX: previously `flex-grow w-full` — `w-full` (width:100%)
+              overrode the flex sizing, forcing the column to 100% of parent
+              width (which is the FULL container, ignoring the 128px photo on
+              the left). On md+ this caused the form fields to overflow past
+              the photo column and break the layout ("mental ke kanan").
+              New pattern: `w-full md:w-auto md:flex-1 md:min-w-0` —
+                mobile (flex-col): w-full = full width below the photo
+                md+ (flex-row): md:w-auto + md:flex-1 = take remaining space
+                                md:min-w-0 = allow shrinking (prevents overflow) */}
+          <div className="w-full md:w-auto md:flex-1 md:min-w-0 flex flex-col gap-4">
             <div>
               <label className="block text-xs font-condensed uppercase font-bold mb-1 flex items-center gap-1">
                 <UserIcon className="w-3 h-3" /> Nama Tampilan
@@ -161,6 +173,22 @@ export function SettingsView() {
                   Nama resmi hanya dapat diubah admin. Hubungi admin untuk perubahan.
                 </p>
               )}
+            </div>
+            <div>
+              <label className="block text-xs font-condensed uppercase font-bold mb-1 flex items-center gap-1">
+                <UserCheck className="w-3 h-3" /> Nama Panggilan
+              </label>
+              <input
+                type="text"
+                value={profile.nickname}
+                onChange={(e) => setProfile({ ...profile, nickname: e.target.value })}
+                maxLength={20}
+                className="w-full border border-[var(--brand-ink)] p-2.5 text-sm bg-[var(--brand-surface-2)]"
+                placeholder="cth: Rayn, Aldi, Dikri"
+              />
+              <p className="text-[10px] text-[var(--brand-ink-muted)] mt-1">
+                Nama panggilan sehari-hari. Tampil di pojok kanan atas kartu direktori & di detail profil.
+              </p>
             </div>
             <div>
               <label className="block text-xs font-condensed uppercase font-bold mb-1">Instagram</label>
