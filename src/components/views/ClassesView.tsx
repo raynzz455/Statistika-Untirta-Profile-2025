@@ -226,21 +226,40 @@ export function ClassesView() {
   const [classB, setClassB] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
   const [activeSemester, setActiveSemester] = useState('1')
+  const [academicYear, setAcademicYear] = useState<string | null>(null)
 
+  // Re-fetch when semester changes — query class_history table
   useEffect(() => {
-    Promise.all([
-      fetch('/api/students?kelas=A').then((r) => r.json()),
-      fetch('/api/students?kelas=B').then((r) => r.json()),
-      fetch('/api/stats').then((r) => r.json()),
-    ])
-      .then(([a, b, st]) => {
-        setClassA(a.students || [])
-        setClassB(b.students || [])
-        setStats({ classA: st.classA || 0, classB: st.classB || 0, total: (st.classA || 0) + (st.classB || 0) })
+    setLoading(true)
+    
+    // Fetch class history for selected semester
+    fetch(`/api/students/class-history?semester=${activeSemester}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setClassA(d.classA || [])
+        setClassB(d.classB || [])
+        setAcademicYear(d.academicYear || null)
+        setStats({
+          classA: (d.classA || []).length,
+          classB: (d.classB || []).length,
+          total: d.total || 0,
+        })
+      })
+      .catch(() => {
+        setClassA([])
+        setClassB([])
+        setStats({ classA: 0, classB: 0, total: 0 })
+      })
+      .finally(() => setLoading(false))
+    
+    // Also fetch overall stats (always from current students table)
+    fetch('/api/stats')
+      .then((r) => r.json())
+      .then((st) => {
+        // Only update total count, not per-class (that comes from class-history)
       })
       .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+  }, [activeSemester])  // ← activeSemester in dependency array = re-fetch on change!
 
   const SEMESTERS = [
     { value: '1', label: 'Sem 1' },
@@ -258,7 +277,7 @@ export function ClassesView() {
           Rotasi &amp; <span className="italic text-[var(--brand-navy)]">Kelas</span>
         </h1>
         <p className="text-[10px] uppercase tracking-widest font-condensed text-[var(--brand-ink-muted)]">
-          Total {stats.total} mahasiswa • {stats.classA} di Kelas A • {stats.classB} di Kelas B
+          Semester {activeSemester}{academicYear ? ` • ${academicYear}` : ''} • {stats.total} mahasiswa • {stats.classA} di Kelas A • {stats.classB} di Kelas B
         </p>
       </div>
 
