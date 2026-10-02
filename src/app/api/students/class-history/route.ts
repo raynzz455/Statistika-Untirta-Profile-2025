@@ -29,27 +29,42 @@ export async function GET(req: NextRequest) {
   }
 
   // Query student_class_history joined with students
-  const history = await db.studentClassHistory.findMany({
-    where: {
-      semester,
-      ...(angkatan ? { angkatan } : {}),
-    },
-    include: {
-      student: {
-        select: {
-          id: true,
-          name: true,
-          nim: true,
-          imageUrl: true,
-          kelas: true,
-          semester: true,
-          angkatan: true,
-          nickname: true,
+  let history: any[] = []
+  try {
+    history = await db.studentClassHistory.findMany({
+      where: {
+        semester,
+        ...(angkatan ? { angkatan } : {}),
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            nim: true,
+            imageUrl: true,
+            kelas: true,
+            semester: true,
+            angkatan: true,
+            nickname: true,
+          },
         },
       },
-    },
-    orderBy: [{ kelas: 'asc' }, { student: { nim: 'asc' } }],
-  })
+      orderBy: [{ kelas: 'asc' }, { student: { nim: 'asc' } }],
+    })
+  } catch (e: any) {
+    // Table might not exist yet, or Prisma client not regenerated
+    console.error('[class-history] query error:', e.message?.slice(0, 100))
+    return NextResponse.json({
+      classA: [],
+      classB: [],
+      total: 0,
+      semester,
+      academicYear: null,
+      isCurrent: false,
+      error: 'Class history table not found. Run bun run db:push && bun run db:generate.',
+    })
+  }
 
   // Group by kelas
   const classA = history
