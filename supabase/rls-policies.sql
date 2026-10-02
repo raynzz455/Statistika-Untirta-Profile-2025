@@ -40,7 +40,7 @@
 -- Mirrors auth.users. Auto-populated via trigger when user signs up via
 -- Supabase Auth (Google, GitHub, email, etc.).
 CREATE TABLE IF NOT EXISTS public.profiles (
-  id           UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  id           UUID PRIMARY KEY -- no FK to auth.users (avoids Prisma P4002 error),
   username     TEXT UNIQUE,
   role         TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
   display_name TEXT,
@@ -48,6 +48,9 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Drop FK if it exists from a previous run (when profiles had REFERENCES auth.users)
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;
 
 CREATE INDEX IF NOT EXISTS idx_profiles_username ON public.profiles(username);
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);

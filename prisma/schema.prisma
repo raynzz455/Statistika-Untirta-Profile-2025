@@ -35,9 +35,6 @@ datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
   directUrl  = env("DIRECT_URL")
-  // Supabase uses cross-schema references: public.profiles → auth.users
-  // Must list both schemas so Prisma doesn't error on db:push (P4002)
-  schemas    = ["public", "auth"]
 
   // === LOCAL DEV (SQLite, uncomment to use) ===
   // provider = "sqlite"
@@ -73,7 +70,6 @@ model User {
   sentMessages     Message[] @relation("MessageSender")
   receivedMessages Message[] @relation("MessageRecipient")
 
-  @@schema("public")
   @@map("users")
 }
 
@@ -108,7 +104,6 @@ model Student {
   // Class history (rotation tracking)
   classHistory StudentClassHistory[]
 
-  @@schema("public")
   @@map("students")
 }
 
@@ -137,7 +132,6 @@ model StudentClassHistory {
   @@unique([studentId, semester]) // one record per student per semester
   @@index([studentId, semester])
   @@index([kelas, semester])
-  @@schema("public")
   @@map("student_class_history")
 }
 
@@ -162,7 +156,6 @@ model StudentPortfolio {
 
   @@index([studentId, type, order])
   @@index([type, studentId])
-  @@schema("public")
   @@map("student_portfolios")
 }
 
@@ -186,7 +179,6 @@ model Article {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@schema("public")
   @@map("articles")
 }
 
@@ -201,7 +193,6 @@ model Series {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@schema("public")
   @@map("series")
 }
 
@@ -215,7 +206,6 @@ model SeriesItem {
   assignedAt DateTime @default(now()) @map("assigned_at")
 
   @@unique([seriesId, articleId])
-  @@schema("public")
   @@map("series_items")
 }
 
@@ -233,7 +223,6 @@ model Dosen {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@schema("public")
   @@map("dosen")
 }
 
@@ -244,7 +233,6 @@ model Tag {
   articles  ArticleTag[]
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@schema("public")
   @@map("tags")
 }
 
@@ -256,7 +244,6 @@ model ArticleTag {
   assignedAt DateTime @default(now()) @map("assigned_at")
 
   @@id([articleId, tagId])
-  @@schema("public")
   @@map("article_tags")
 }
 
@@ -269,7 +256,6 @@ model Bookmark {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([userId, articleId])
-  @@schema("public")
   @@map("bookmarks")
 }
 
@@ -282,7 +268,6 @@ model Like {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([userId, articleId])
-  @@schema("public")
   @@map("likes")
 }
 
@@ -304,7 +289,6 @@ model Event {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@schema("public")
   @@map("events")
 }
 
@@ -318,7 +302,6 @@ model Gallery {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@schema("public")
   @@map("gallery")
 }
 
@@ -333,7 +316,6 @@ model Rsvp {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([userId, eventId])
-  @@schema("public")
   @@map("rsvps")
 }
 
@@ -346,7 +328,6 @@ model Comment {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@schema("public")
   @@map("comments")
 }
 
@@ -359,7 +340,6 @@ model Follow {
   createdAt   DateTime @default(now()) @map("created_at")
 
   @@unique([followerId, followingId])
-  @@schema("public")
   @@map("follows")
 }
 
@@ -378,7 +358,6 @@ model Notification {
   actor       User?    @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([recipientId, read, createdAt])
-  @@schema("public")
   @@map("notifications")
 }
 
@@ -395,7 +374,6 @@ model Message {
 
   @@index([recipientId, read, createdAt])
   @@index([senderId, recipientId, createdAt])
-  @@schema("public")
   @@map("messages")
 }
 
@@ -411,6 +389,5 @@ model Aspirasi {
 
   @@index([approved, createdAt])
   @@index([category, approved])
-  @@schema("public")
   @@map("aspirasi")
 }
