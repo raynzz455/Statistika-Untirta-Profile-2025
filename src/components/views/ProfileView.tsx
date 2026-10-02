@@ -22,6 +22,7 @@ interface PortfolioItem {
 
 interface Student {
   id: string
+  ownerId: string | null // auth user ID who owns this student profile (for canEdit check)
   name: string
   nickname: string | null
   nim: string
@@ -55,7 +56,10 @@ export function ProfileView() {
 
   const load = () => {
     if (!selectedId) { setLoading(false); return }
-    fetch(`/api/students/${selectedId}`)
+    // cache: 'no-store' bypasses browser cache — guarantees fresh data
+    // after a profile update (so user sees their new photo/bio immediately).
+    // Backend also sets Cache-Control: no-store, but this is defensive.
+    fetch(`/api/students/${selectedId}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => setStudent(d.student || null))
       .catch(() => setStudent(null))
@@ -88,7 +92,14 @@ export function ProfileView() {
     )
   }
 
-  const canEdit = !!(user && (user.role === 'admin' || user.id === student.id))
+  // Authorization: admin OR the user who owns this student profile (linked via NIM claim).
+  // BUG FIX: previously compared user.id === student.id (those are NEVER equal —
+  // user.id is the auth user ID, student.id is the student record ID, both CUIDs
+  // but different. So owners couldn't edit their own profile from ProfileView —
+  // only admins could. The correct check is user.id === student.ownerId
+  // (ownerId is the foreign-key-style string column that links a student
+  // record to its owning auth user).
+  const canEdit = !!(user && (user.role === 'admin' || user.id === student.ownerId))
   const portfolios = student.portfolios || []
   const byType = (type: PortfolioItem['type']) => portfolios.filter((p) => p.type === type)
 

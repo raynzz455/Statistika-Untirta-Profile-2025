@@ -78,15 +78,23 @@ export function SettingsView() {
 
     // If we have a student profile linked, update it via API
     if (studentId) {
+      // IMPORTANT: send imageUrl as the ACTUAL string value (even if empty).
+      // Previously we sent `imageUrl: profile.imageUrl || undefined` which
+      // converted empty string → undefined → backend skipped the field →
+      // photo was never cleared in DB when user clicked the X remove button.
+      // Now: empty string reaches the PUT handler, which calls
+      // db.student.update({ data: { imageUrl: '' } }) — clears the field.
       const res = await fetch(`/api/students/${studentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        // cache: 'no-store' ensures the PUT itself isn't cached (defensive)
+        cache: 'no-store',
         body: JSON.stringify({
           tagline: profile.tagline,
           bio: profile.bio,
           instagram: profile.instagram,
           asalDaerah: profile.asalDaerah,
-          imageUrl: profile.imageUrl || undefined,
+          imageUrl: profile.imageUrl, // empty string is intentional — clears DB field
           lagu: profile.lagu || null,
           laguArtis: profile.laguArtis || null,
           laguUrl: profile.laguUrl || null,
@@ -95,6 +103,12 @@ export function SettingsView() {
       const d = await res.json()
       if (d.error) return toast.error(d.error)
       toast.success('Profil berhasil diperbarui!')
+      // Force a refetch of /api/students so any other view (DirectoryView)
+      // gets fresh data when user navigates there. The backend now sets
+      // Cache-Control: no-store, but in case the browser still has an old
+      // response cached from before, this busts it.
+      // (We don't await — fire and forget.)
+      fetch('/api/students', { cache: 'no-store' }).catch(() => {})
     } else {
       // No linked student - just simulate save (could be extended to create student profile)
       toast.success('Profil pengguna disimpan (belum tertaut ke direktori mahasiswa).')

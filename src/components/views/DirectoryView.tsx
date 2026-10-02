@@ -37,7 +37,10 @@ export function DirectoryView() {
     const params = new URLSearchParams()
     if (kelasFilter !== 'all') params.set('kelas', kelasFilter)
     if (q) params.set('q', q)
-    fetch(`/api/students?${params}`)
+    // cache: 'no-store' bypasses browser cache — guarantees fresh data after
+    // a profile update (so user sees their new photo/bio immediately).
+    // Backend also sets Cache-Control: no-store, but this is defensive.
+    fetch(`/api/students?${params}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => setStudents(d.students || []))
       .catch(() => setStudents([]))
