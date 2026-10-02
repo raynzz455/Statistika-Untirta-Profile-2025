@@ -78,16 +78,28 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON public.audit_log(created_
 -- ============================================================================
 
 -- Trigger: auto-create profile when user signs up via Supabase Auth
+-- CRITICAL: The INSERT is wrapped in a nested BEGIN/EXCEPTION block so
+-- that if the profiles table doesn't exist yet, or has a column mismatch,
+-- or any other error occurs — the trigger SILENTLY IGNORES the error and
+-- returns NEW anyway. This prevents the trigger from blocking signup
+-- (which was causing "Database error saving new user" → 400 on /api/auth/signup).
+-- The profile can be created later via the /api/auth/me route or manually.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, username, display_name)
-  VALUES (
-    NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1))
-  )
-  ON CONFLICT (id) DO NOTHING;
+  BEGIN
+    INSERT INTO public.profiles (id, username, display_name)
+    VALUES (
+      NEW.id,
+      COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
+      COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1))
+    )
+    ON CONFLICT (id) DO NOTHING;
+  EXCEPTION WHEN OTHERS THEN
+    -- Silently ignore — don't block signup
+    -- Log to Postgres log for debugging (visible in Supabase Dashboard → Logs)
+    RAISE WARNING 'handle_new_user: failed to insert profile for user %: %', NEW.id, SQLERRM;
+  END;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

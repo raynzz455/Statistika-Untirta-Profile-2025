@@ -80,9 +80,27 @@ export async function POST(req: NextRequest) {
     })
 
     if (error) {
-      console.error('[auth/signup] Supabase error:', error.message)
+      // Log full error for debugging
+      console.error('[auth/signup] Supabase error:', {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+      })
+
+      // Provide user-friendly error messages for common errors
+      let friendlyError = error.message
+      if (error.message.includes('Database error')) {
+        friendlyError = 'Database error saat signup. Pastikan supabase/rls-policies.sql sudah di-run di Supabase SQL Editor (buat table profiles + trigger). Atau coba lagi dalam beberapa detik.'
+      } else if (error.message.includes('already') && error.message.includes('registered')) {
+        friendlyError = 'Email sudah terdaftar. Silakan login langsung.'
+      } else if (error.message.includes('rate limit')) {
+        friendlyError = 'Terlalu banyak percobaan. Coba lagi nanti.'
+      } else if (error.message.includes('Password')) {
+        friendlyError = 'Password terlalu lemah. Minimal 6 karakter.'
+      }
+
       return NextResponse.json(
-        { error: error.message },
+        { error: friendlyError, _supabaseError: error.message },
         { status: 400, headers: { 'Cache-Control': 'no-store' } }
       )
     }
