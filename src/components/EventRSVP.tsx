@@ -61,7 +61,20 @@ export function EventRSVP({ eventId }: { eventId: string }) {
         return r.json()
       })
       .then((d) => {
-        console.log('[EventRSVP] load response:', { myStatus: d.myStatus, counts: d.counts, rsvpCount: d.rsvps?.length })
+        console.log('[EventRSVP] load response:', {
+          myStatus: d.myStatus,
+          counts: d.counts,
+          rsvpCount: d.rsvps?.length,
+          dbError: d.dbError,
+          _debug: d._debug,
+          _error: d._error,
+        })
+        // If the GET returned a dbError, show it in the error banner
+        if (d.dbError) {
+          setRsvpError(d._error || 'Gagal memuat data RSVP. Mungkin ada masalah koneksi database.')
+        } else {
+          setRsvpError(null)
+        }
         setMyStatus(d.myStatus as Status | null)
         setCounts(d.counts || { hadir: 0, mungkin: 0, tidak: 0, total: 0 })
         setRsvps(Array.isArray(d.rsvps) ? d.rsvps : [])
