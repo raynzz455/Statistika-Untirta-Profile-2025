@@ -35,6 +35,9 @@ datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
   directUrl  = env("DIRECT_URL")
+  // Supabase uses cross-schema references: public.profiles → auth.users
+  // Must list both schemas so Prisma doesn't error on db:push (P4002)
+  schemas    = ["public", "auth"]
 
   // === LOCAL DEV (SQLite, uncomment to use) ===
   // provider = "sqlite"
