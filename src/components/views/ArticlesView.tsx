@@ -15,9 +15,13 @@ import { toast } from 'sonner'
 function LikeCountBadge({ articleId }: { articleId: string }) {
   const [count, setCount] = useState<number | null>(null)
   useEffect(() => {
-    fetch(`/api/articles/${articleId}/like`)
-      .then((r) => r.json())
-      .then((d) => setCount(d.count || 0))
+    // cache: 'no-store' + catch 404 gracefully (article might be deleted)
+    fetch(`/api/articles/${articleId}/like`, { cache: 'no-store' })
+      .then((r) => {
+        if (!r.ok) return null // 404 or 500 — article may be deleted
+        return r.json()
+      })
+      .then((d) => setCount(d?.count || 0))
       .catch(() => setCount(0))
   }, [articleId])
   if (count === null || count === 0) return null
@@ -179,10 +183,19 @@ export function ArticlesView() {
 
   const remove = async (id: string) => {
     if (!confirm('Hapus artikel ini?')) return
-    const res = await fetch(`/api/articles/${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/articles/${id}`, {
+      method: 'DELETE',
+      cache: 'no-store', // bypass browser cache
+    })
+    // DELETE is now idempotent — returns 200 even if already deleted
     if (res.ok) {
-      toast.success('Artikel dihapus.')
-      load()
+      const d = await res.json().catch(() => ({}))
+      if (d.alreadyDeleted) {
+        toast.info('Artikel sudah dihapus sebelumnya.')
+      } else {
+        toast.success('Artikel dihapus.')
+      }
+      load() // refresh list immediately
     } else {
       const d = await res.json().catch(() => ({}))
       toast.error(d.error || 'Gagal menghapus.')
