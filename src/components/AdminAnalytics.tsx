@@ -45,7 +45,7 @@ export function AdminAnalytics() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetch('/api/analytics')
+    fetch('/api/analytics', { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setError(d.error)

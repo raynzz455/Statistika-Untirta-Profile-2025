@@ -31,7 +31,7 @@ export function UserManagement() {
 
   const load = () => {
     setLoading(true)
-    fetch('/api/users')
+    fetch('/api/users', { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
         if (d.error) {
@@ -51,7 +51,7 @@ export function UserManagement() {
 
   const addUser = async (e: React.FormEvent) => {
     e.preventDefault()
-    const res = await fetch('/api/users', {
+    const res = await fetch('/api/users', { cache: 'no-store',
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(addForm),
@@ -66,7 +66,7 @@ export function UserManagement() {
 
   const changeRole = async (u: UserItem, newRole: 'admin' | 'user') => {
     if (u.id === me?.id) return toast.error('Tidak dapat mengubah role diri sendiri.')
-    const res = await fetch(`/api/users/${u.id}`, {
+    const res = await fetch(`/api/users/${u.id}`, { cache: 'no-store',
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ role: newRole }),
@@ -80,7 +80,7 @@ export function UserManagement() {
   const deleteUser = async (u: UserItem) => {
     if (u.id === me?.id) return toast.error('Tidak dapat menghapus diri sendiri.')
     if (!confirm(`Hapus user "${u.username}"? User akan kehilangan akses tapi data artikel/event/gallery miliknya tetap ada.`)) return
-    const res = await fetch(`/api/users/${u.id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/users/${u.id}`, { cache: 'no-store', method: 'DELETE' })
     const d = await res.json().catch(() => ({}))
     if (!res.ok || d.error) return toast.error(d.error || 'Gagal menghapus.')
     toast.success(`User "${u.username}" dihapus.`)
@@ -91,7 +91,7 @@ export function UserManagement() {
     e.preventDefault()
     if (!pwModal) return
     if (pwForm.password.length < 4) return toast.error('Password minimal 4 karakter.')
-    const res = await fetch(`/api/users/${pwModal.id}`, {
+    const res = await fetch(`/api/users/${pwModal.id}`, { cache: 'no-store',
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: pwForm.password }),

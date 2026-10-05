@@ -42,15 +42,22 @@ export function AdminView() {
 
   const load = () => {
     setLoading(true)
+    // cache: 'no-store' on ALL fetches — bypasses browser cache so
+    // admin data is ALWAYS fresh after add/edit/delete operations.
+    // Without this, the browser serves cached stale responses and the
+    // admin thinks they need to manually refresh to see changes.
     Promise.all([
-      fetch('/api/students').then((r) => r.json()),
-      fetch('/api/stats').then((r) => r.json()),
+      fetch('/api/students', { cache: 'no-store' }).then((r) => r.json()),
+      fetch('/api/stats', { cache: 'no-store' }).then((r) => r.json()),
     ])
       .then(([sData, stData]) => {
-        setStudents(sData.students || [])
-        setStats(stData)
+        setStudents(Array.isArray(sData.students) ? sData.students : [])
+        setStats(stData || { students: 0, articles: 0, events: 0, gallery: 0, classA: 0, classB: 0 })
       })
-      .catch(() => {})
+      .catch(() => {
+        setStudents([])
+        setStats({ students: 0, articles: 0, events: 0, gallery: 0, classA: 0, classB: 0 })
+      })
       .finally(() => setLoading(false))
   }
 
@@ -97,6 +104,7 @@ export function AdminView() {
       const res = await fetch(`/api/students/${form.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
         body: JSON.stringify(payload),
       })
       const d = await res.json()
@@ -106,6 +114,7 @@ export function AdminView() {
       const res = await fetch('/api/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
         body: JSON.stringify(payload),
       })
       const d = await res.json()
@@ -136,7 +145,7 @@ export function AdminView() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Hapus data mahasiswa ini? Tindakan tidak dapat dibatalkan.')) return
-    const res = await fetch(`/api/students/${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/students/${id}`, { method: 'DELETE', cache: 'no-store' })
     if (res.ok) {
       toast.success('Mahasiswa dihapus.')
       load()
@@ -167,6 +176,7 @@ export function AdminView() {
     const res = await fetch('/api/students/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
       body: JSON.stringify({ ids: selectedIds, action, kelas }),
     })
     const d = await res.json()
