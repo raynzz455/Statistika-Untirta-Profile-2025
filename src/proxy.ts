@@ -43,10 +43,6 @@ export async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname
 
   // === OAuth callback fallback ===
-  // If Supabase redirects to root URL with ?code=... (happens when
-  // /auth/callback is not in Supabase Redirect URLs list), catch it
-  // here and redirect to /auth/callback?code=... so the callback
-  // handler can process it.
   const code = req.nextUrl.searchParams.get('code')
   if (code && pathname === '/' && !pathname.startsWith('/auth/callback')) {
     const callbackUrl = new URL('/auth/callback', req.url)
@@ -54,6 +50,49 @@ export async function proxy(req: NextRequest) {
     const next = req.nextUrl.searchParams.get('next')
     if (next) callbackUrl.searchParams.set('next', next)
     return NextResponse.redirect(callbackUrl)
+  }
+
+  // === CSRF Protection ===
+  // For mutation requests (POST, PUT, DELETE, PATCH) to /api/* routes,
+  // check that the Origin header matches our host.
+  // This prevents cross-site request forgery — a malicious site can't
+  // set the Origin header to our domain.
+  // Auth endpoints (login, signup, oauth) are exempt because they
+  // handle their own security. Public endpoints (aspirasi, subscribe)
+  // are also exempt.
+  const MUTATION_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH']
+  const isApiMutation = MUTATION_METHODS.includes(req.method) && pathname.startsWith('/api/')
+  const isAuthEndpoint = pathname.startsWith('/api/auth/')
+  const isPublicEndpoint = pathname === '/api/aspirasi' || pathname === '/api/subscribe'
+
+  if (isApiMutation && !isAuthEndpoint && !isPublicEndpoint) {
+    const origin = req.headers.get('origin')
+    const host = req.headers.get('host')
+
+    // Browsers always send Origin header on cross-origin mutations.
+    // If absent, it's likely a non-browser client — reject for security.
+    if (!origin || !host) {
+      return NextResponse.json(
+        { error: 'Request ditolak: missing security headers.' },
+        { status: 403 }
+      )
+    }
+
+    // Check that origin matches our host
+    try {
+      const originUrl = new URL(origin)
+      if (originUrl.host !== host) {
+        return NextResponse.json(
+          { error: 'Request ditolak: origin mismatch (CSRF protection).' },
+          { status: 403 }
+        )
+      }
+    } catch {
+      return NextResponse.json(
+        { error: 'Request ditolak: invalid origin header.' },
+        { status: 403 }
+      )
+    }
   }
 
   // Skip proxy entirely if Supabase not configured (local dev mode)
@@ -70,7 +109,7 @@ export async function proxy(req: NextRequest) {
   if (
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/api/_next/') ||
-    pathname.includes('.') || // files with extensions
+    pathname.includes('.') ||
     pathname === '/favicon.ico' ||
     pathname === '/robots.txt' ||
     pathname === '/logo.svg'
@@ -103,9 +142,6 @@ export async function proxy(req: NextRequest) {
     },
   })
 
-  // Refresh session if expired — required for Server Components
-  // to render user-specific content correctly.
-  // NOTE: This call must be awaited, otherwise sessions won't refresh.
   await supabase.auth.getUser()
 
   return res

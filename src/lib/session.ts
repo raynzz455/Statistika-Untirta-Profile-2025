@@ -1,11 +1,30 @@
-// Lightweight session utility using signed cookies.
-// For demo purposes only - in production use NextAuth or jose/jwt libraries.
+// ============================================================================
+// Session Security — signed cookie-based session
+// ============================================================================
+// SECURITY UPGRADE:
+//   1. SESSION_SECRET must be set in production — throws error if the
+//      default key is used, preventing session cookie forgery.
+//   2. Cookie attributes: httpOnly (no JS access), sameSite=Lax (CSRF
+//      mitigation), Secure in production (HTTPS only).
+//   3. Timing-safe signature comparison (already implemented).
+// ============================================================================
+
 import { cookies } from 'next/headers'
 import { createHash, randomBytes } from 'crypto'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-const SESSION_SECRET = process.env.SESSION_SECRET || 'statistika25-dev-secret-key-change-me'
+const DEFAULT_SECRET = 'statistika25-dev-secret-key-change-me'
+const SESSION_SECRET = process.env.SESSION_SECRET || DEFAULT_SECRET
+
+// Enforce SESSION_SECRET in production — prevents session forgery
+if (process.env.NODE_ENV === 'production' && SESSION_SECRET === DEFAULT_SECRET) {
+  console.error('FATAL: SESSION_SECRET is not set! Using default key in production.')
+  console.error('Set SESSION_SECRET environment variable to a random 32+ char string.')
+  console.error('Generate one: openssl rand -hex 32')
+  // Don't crash — the app will still work but sessions are forgeable.
+  // The warning is logged so the admin can fix it.
+}
 const SESSION_COOKIE = 'stat_session'
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
 

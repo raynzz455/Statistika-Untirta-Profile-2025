@@ -22,7 +22,33 @@ import { db } from '@/lib/db'
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
 
+// Rate limiting: max 3 signup attempts per IP per 10 minutes
+type RateBucket = { count: number; firstAt: number }
+const signupRateMap = new Map<string, RateBucket>()
+const SIGNUP_WINDOW_MS = 10 * 60 * 1000
+const SIGNUP_MAX_ATTEMPTS = 3
+
+function checkSignupRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const bucket = signupRateMap.get(ip)
+  if (!bucket || now - bucket.firstAt > SIGNUP_WINDOW_MS) {
+    signupRateMap.set(ip, { count: 1, firstAt: now })
+    return true
+  }
+  if (bucket.count >= SIGNUP_MAX_ATTEMPTS) return false
+  bucket.count += 1
+  return true
+}
+
 export async function POST(req: NextRequest) {
+  // Rate limit by IP
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  if (!checkSignupRateLimit(ip)) {
+    return NextResponse.json(
+      { error: 'Terlalu banyak percobaan signup. Coba lagi dalam 10 menit.' },
+      { status: 429, headers: { 'Cache-Control': 'no-store', 'Retry-After': '600' } }
+    )
+  }
   const body = await req.json().catch(() => null)
   if (!body) {
     return NextResponse.json(

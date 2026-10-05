@@ -6,7 +6,33 @@ import { hashPassword, setSession, setSessionCookie } from '@/lib/session'
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
 
+// Rate limiting: max 5 login attempts per IP per 5 minutes
+type RateBucket = { count: number; firstAt: number }
+const loginRateMap = new Map<string, RateBucket>()
+const LOGIN_WINDOW_MS = 5 * 60 * 1000
+const LOGIN_MAX_ATTEMPTS = 5
+
+function checkLoginRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const bucket = loginRateMap.get(ip)
+  if (!bucket || now - bucket.firstAt > LOGIN_WINDOW_MS) {
+    loginRateMap.set(ip, { count: 1, firstAt: now })
+    return true
+  }
+  if (bucket.count >= LOGIN_MAX_ATTEMPTS) return false
+  bucket.count += 1
+  return true
+}
+
 export async function POST(req: NextRequest) {
+  // Rate limit by IP
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  if (!checkLoginRateLimit(ip)) {
+    return NextResponse.json(
+      { error: 'Terlalu banyak percobaan login. Coba lagi dalam 5 menit.' },
+      { status: 429, headers: { 'Cache-Control': 'no-store', 'Retry-After': '300' } }
+    )
+  }
   try {
     const body = await req.json()
     const username = String(body?.username ?? '').trim().toLowerCase()
