@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
       let role: 'admin' | 'user' = 'user'
       try {
         const profile = await db.$queryRaw<{ role: string | null }[]>`
-          SELECT role FROM profiles WHERE id = ${data.user.id}::text
+          SELECT role FROM profiles WHERE id = ${data.user.id}::uuid
         `.catch(() => [])
         if (profile && profile.length > 0 && profile[0].role === 'admin') {
           role = 'admin'

@@ -41,7 +41,7 @@ export async function GET() {
   let role: 'admin' | 'user' = session.role // default to session's role
   try {
     const profile = await db.$queryRaw<{ role: string | null }[]>`
-      SELECT role FROM profiles WHERE id = ${session.userId}::text
+      SELECT role FROM profiles WHERE id = ${session.userId}::uuid
     `.catch(() => [])
     if (profile && profile.length > 0) {
       // Found the profile — use the role from the DB (might have been updated)
