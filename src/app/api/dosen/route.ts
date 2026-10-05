@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { withCache, CachePresets } from '@/lib/cache'
+// withCache removed — next.config.ts handles caching
 
 // GET /api/dosen — list all dosen
 export async function GET() {
   const dosen = await db.dosen.findMany({
     orderBy: [{ order: 'asc' }, { name: 'asc' }],
   })
-  return withCache(NextResponse.json({ dosen }), CachePresets.publicStatic)
+  return NextResponse.json(NextResponse.json({ dosen }))
 }
 
 // POST /api/dosen — create new dosen (admin only)

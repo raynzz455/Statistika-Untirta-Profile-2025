@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { withCache, CachePresets } from '@/lib/cache'
+// withCache removed — next.config.ts sets Cache-Control: no-store on ALL /api/* routes
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url)
@@ -44,12 +44,12 @@ export async function GET(req: NextRequest) {
     // Return empty list + dbError flag instead of 500 so the frontend
     // can render "Belum ada artikel" gracefully.
     console.error('[api/articles] query error:', e?.message?.slice(0, 100))
-    return withCache(
+    return NextResponse.json(
       NextResponse.json({ articles: [], dbError: true }),
       CachePresets.publicDynamic
     )
   }
-  return withCache(
+  return NextResponse.json(
     NextResponse.json({
       articles: articles.map((a) => ({
         ...a,

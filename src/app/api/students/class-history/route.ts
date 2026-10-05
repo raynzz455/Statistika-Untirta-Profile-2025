@@ -14,7 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { withCache, CachePresets } from '@/lib/cache'
+// withCache removed — next.config.ts handles caching
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
       isCurrent: h.isCurrent,
     }))
 
-  return withCache(
+  return NextResponse.json(
     NextResponse.json({
       classA,
       classB,
