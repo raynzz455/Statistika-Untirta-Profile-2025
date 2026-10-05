@@ -4,16 +4,21 @@ import { db } from '@/lib/db'
 // GET /api/users/[id]/followers — list users who follow this user
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
-  const follows = await db.follow.findMany({
-    where: { followingId: id },
-    include: {
-      follower: {
-        select: { id: true, username: true, displayName: true, role: true },
+  try {
+    const follows = await db.follow.findMany({
+      where: { followingId: id },
+      include: {
+        follower: {
+          select: { id: true, username: true, displayName: true, role: true },
+        },
       },
-    },
-    orderBy: { createdAt: 'desc' },
-  })
-  return NextResponse.json({
-    followers: follows.map((f) => f.follower),
-  })
+      orderBy: { createdAt: 'desc' },
+    })
+    return NextResponse.json({
+      followers: follows.map((f) => f.follower),
+    })
+  } catch (e: any) {
+    console.error('[api/users/id/followers GET] query error:', e?.message?.slice(0, 100))
+    return NextResponse.json({ followers: [], dbError: true })
+  }
 }

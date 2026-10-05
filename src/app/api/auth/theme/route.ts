@@ -12,10 +12,17 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const theme = body?.theme === 'dark' ? 'dark' : 'light'
 
-  await db.user.update({
-    where: { id: session.userId },
-    data: { theme },
-  })
-
-  return NextResponse.json({ ok: true, theme })
+  try {
+    await db.user.update({
+      where: { id: session.userId },
+      data: { theme },
+    })
+    return NextResponse.json({ ok: true, theme })
+  } catch (e: any) {
+    console.error('[api/auth/theme POST] error:', e?.message?.slice(0, 200))
+    return NextResponse.json(
+      { error: 'Gagal menyimpan preferensi tema.' },
+      { status: 500 }
+    )
+  }
 }

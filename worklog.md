@@ -152,3 +152,58 @@ Stage Summary:
 - localStorage stores absolute expiry timestamp as backup for when cookies are blocked.
 - Bumped storage key version (v1 -> v2) to invalidate old 5-min entries.
 - Artifacts: src/lib/store.ts, src/components/OpeningAnimation.tsx.
+
+---
+Task ID: bulk-trycatch-fix
+Agent: trycatch-agent
+Task: Add try/catch to 27 API routes missing error handling
+
+Work Log:
+- Read worklog.md to understand prior work (cache-agent had wrapped 7 GET routes with `withCache` + `memoize`; post-auth-fixes agent had added try/catch to `/api/students`, `/api/articles` GET, and `/api/recommendations`).
+- Ran the discovery script (`grep -c "try {"` per route file) and found 27 files with 0 try blocks — minus `src/app/api/route.ts` (root API docs page, explicitly skipped per task instructions) = 26 routes to modify.
+- For each route, wrapped ALL `db.xxx` calls in `try { ... } catch (e: any) { console.error(...) ; return ... }`. Auth checks (`getSession`, `getCurrentUser`, admin-role guard) kept OUTSIDE try/catch so 401/403 semantics are preserved — only DB work + body parsing + business validations live inside the try.
+- Error-handling pattern (consistent with the existing `/api/students` GET style):
+  * GET routes → `NextResponse.json({ <empty shape>, dbError: true })` (HTTP 200, NOT 500). Empty shapes mirror the success shape (`{ articles: [] }`, `{ dosen: [] }`, `{ event: null }`, `{ user: null, stats: {...0...}, recentActivity: {...empty...} }`, etc.) so the frontend can render "no data" gracefully instead of crashing on JSON.parse of a 500 empty body.
+  * POST / PUT / PATCH / DELETE routes → `NextResponse.json({ error: 'Gagal <action>. Coba lagi atau hubungi admin.' }, { status: 500 })`.
+- console.error log tag mirrors the route path (e.g. `[api/analytics]`, `[api/users/id PATCH]`) and slices the error message to first 100–200 chars to avoid dumping huge Prisma payloads.
+- Skipped `src/app/api/route.ts` (root API docs page) per task instruction — no DB calls.
+- Incidental fix while wrapping: `src/app/api/dosen/route.ts` GET had a pre-existing bug `return NextResponse.json(NextResponse.json({ dosen }))` (double-wrapped NextResponse — the outer call serializes the inner NextResponse object as JSON `data` instead of `{ dosen: [...] }`, so /api/dosen GET has been returning broken payloads since at least the cache-agent's work). Fixed to `return NextResponse.json({ dosen })` inside the new try block. No other business-logic changes were made.
+- Also tidied `src/app/api/tags/route.ts`: the original file had stray imports at the BOTTOM of the file (`import { NextRequest }` + `import { getSession }`) below the POST handler. Moved these to the top of the file alongside the existing imports, then wrapped GET and POST with try/catch.
+- Files modified (26 routes):
+  * src/app/api/analytics/route.ts (GET)
+  * src/app/api/articles/[id]/bookmark/route.ts (GET + POST)
+  * src/app/api/articles/bulk/route.ts (POST)
+  * src/app/api/auth/logout/route.ts (POST — wrapped clearSession() defensively even though it has no db call)
+  * src/app/api/auth/theme/route.ts (POST)
+  * src/app/api/bookmarks/route.ts (GET)
+  * src/app/api/dosen/[id]/route.ts (GET + PUT + DELETE)
+  * src/app/api/dosen/route.ts (GET + POST, plus double-wrap bug fix above)
+  * src/app/api/events/[id]/route.ts (GET + PUT + DELETE)
+  * src/app/api/export/route.ts (GET)
+  * src/app/api/gallery/[id]/route.ts (DELETE)
+  * src/app/api/leaderboard/route.ts (GET)
+  * src/app/api/messages/conversation/route.ts (GET)
+  * src/app/api/notifications/[id]/route.ts (PATCH + DELETE)
+  * src/app/api/notifications/route.ts (GET + POST)
+  * src/app/api/students/[id]/portfolio/[itemId]/route.ts (PUT + DELETE)
+  * src/app/api/students/[id]/portfolio/route.ts (GET + POST)
+  * src/app/api/students/bulk/route.ts (POST)
+  * src/app/api/students/unlinked/route.ts (GET)
+  * src/app/api/tags/route.ts (GET + POST, plus import-order tidy)
+  * src/app/api/users/[id]/followers/route.ts (GET)
+  * src/app/api/users/[id]/following/route.ts (GET)
+  * src/app/api/users/[id]/profile/route.ts (GET)
+  * src/app/api/users/[id]/route.ts (PATCH + DELETE)
+  * src/app/api/users/route.ts (GET + POST)
+  * src/app/api/users/suggestions/route.ts (GET — wrapped both anonymous + logged-in branches separately so a failure in the anon branch still returns 200 + `{ suggestions: [], dbError: true }`)
+
+Stage Summary:
+- All 26 API data routes (excluding `/api/route.ts` root docs) now have try/catch around every `db.xxx` call. Database failures (missing DATABASE_URL, schema not pushed, FK violations, connection timeouts, etc.) now return:
+  * 200 + `{ <empty shape>, dbError: true }` for GET — frontend can render "no data" instead of crashing on a 500 empty body.
+  * 500 + `{ error: '<human-readable message>' }` for POST/PUT/PATCH/DELETE — frontend can show the error message and the user can retry without triggering a parse-cascade.
+- This directly fixes the "very slow app" symptom described in the task brief: previously, on DB errors, the routes returned 500 with an empty body. The frontend's `await res.json()` would throw a SyntaxError (Unexpected end of JSON input), which most callers wrapped in their own try/catch that triggered an exponential-backoff retry (e.g. react-query's `retry: 3` + jitter). After this fix, the frontend gets a valid JSON body on the first try, so no retries cascade and the app feels snappy even when the DB is down/slow.
+- All auth checks (401/403 semantics) preserved — try/catch only wraps DB work.
+- No Cache-Control headers added (next.config.ts handles that globally per task rule 3).
+- Lint: `bun run lint` → 0 errors, 13 warnings (all pre-existing, in unrelated component files — same baseline as post-auth-fixes).
+- Discovery script re-run: only `src/app/api/route.ts` remains without try/catch — that's the root API docs page, intentionally skipped per task rule 8.
+- Artifacts (26 files): see "Files modified" list above.

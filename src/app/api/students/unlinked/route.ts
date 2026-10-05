@@ -42,24 +42,34 @@ export async function GET(req: NextRequest) {
   if (kelas) where.kelas = kelas
   if (angkatan) where.angkatan = angkatan
 
-  // === Query unlinked students ===
-  const students = await db.student.findMany({
-    where,
-    select: {
-      id: true,
-      name: true,
-      nim: true,
-      kelas: true,
-      angkatan: true,
-      email: true,
-      createdAt: true,
-    },
-    orderBy: [{ kelas: 'asc' }, { nim: 'asc' }],
-  })
+  try {
+    // === Query unlinked students ===
+    const students = await db.student.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        nim: true,
+        kelas: true,
+        angkatan: true,
+        email: true,
+        createdAt: true,
+      },
+      orderBy: [{ kelas: 'asc' }, { nim: 'asc' }],
+    })
 
-  return NextResponse.json({
-    students,
-    total: students.length,
-    filter: { kelas: kelas || 'all', angkatan: angkatan || 'all' },
-  })
+    return NextResponse.json({
+      students,
+      total: students.length,
+      filter: { kelas: kelas || 'all', angkatan: angkatan || 'all' },
+    })
+  } catch (e: any) {
+    console.error('[api/students/unlinked GET] query error:', e?.message?.slice(0, 100))
+    return NextResponse.json({
+      students: [],
+      total: 0,
+      filter: { kelas: kelas || 'all', angkatan: angkatan || 'all' },
+      dbError: true,
+    })
+  }
 }

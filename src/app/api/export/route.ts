@@ -16,87 +16,97 @@ export async function GET(req: NextRequest) {
   // Fetch all data based on type
   const data: Record<string, any[]> = {}
 
-  if (type === 'all' || type === 'articles') {
-    data.articles = await db.article.findMany({
-      select: {
-        id: true, title: true, excerpt: true, category: true, date: true,
-        author: true, published: true, imageUrl: true, createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    })
-  }
+  try {
+    if (type === 'all' || type === 'articles') {
+      data.articles = await db.article.findMany({
+        select: {
+          id: true, title: true, excerpt: true, category: true, date: true,
+          author: true, published: true, imageUrl: true, createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    }
 
-  if (type === 'all' || type === 'events') {
-    data.events = await db.event.findMany({
-      select: {
-        id: true, title: true, description: true, location: true,
-        startDate: true, endDate: true, category: true, recurrence: true,
-        recurrenceEndDate: true, createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    })
-  }
+    if (type === 'all' || type === 'events') {
+      data.events = await db.event.findMany({
+        select: {
+          id: true, title: true, description: true, location: true,
+          startDate: true, endDate: true, category: true, recurrence: true,
+          recurrenceEndDate: true, createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    }
 
-  if (type === 'all' || type === 'students') {
-    data.students = await db.student.findMany({
-      select: {
-        id: true, name: true, nim: true, kelas: true, tagline: true,
-        bio: true, instagram: true, asalDaerah: true, createdAt: true,
-      },
-      orderBy: { nim: 'asc' },
-    })
-  }
+    if (type === 'all' || type === 'students') {
+      data.students = await db.student.findMany({
+        select: {
+          id: true, name: true, nim: true, kelas: true, tagline: true,
+          bio: true, instagram: true, asalDaerah: true, createdAt: true,
+        },
+        orderBy: { nim: 'asc' },
+      })
+    }
 
-  if (type === 'all' || type === 'users') {
-    data.users = await db.user.findMany({
-      select: {
-        id: true, username: true, role: true, displayName: true,
-        theme: true, createdAt: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    })
-  }
+    if (type === 'all' || type === 'users') {
+      data.users = await db.user.findMany({
+        select: {
+          id: true, username: true, role: true, displayName: true,
+          theme: true, createdAt: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      })
+    }
 
-  if (type === 'all' || type === 'gallery') {
-    data.gallery = await db.gallery.findMany({
-      select: {
-        id: true, caption: true, category: true, imageUrl: true, createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    })
-  }
+    if (type === 'all' || type === 'gallery') {
+      data.gallery = await db.gallery.findMany({
+        select: {
+          id: true, caption: true, category: true, imageUrl: true, createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    }
 
-  if (type === 'all' || type === 'comments') {
-    data.comments = await db.comment.findMany({
-      select: {
-        id: true, content: true, createdAt: true,
-        article: { select: { id: true, title: true } },
-        user: { select: { id: true, username: true, displayName: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
-  }
+    if (type === 'all' || type === 'comments') {
+      data.comments = await db.comment.findMany({
+        select: {
+          id: true, content: true, createdAt: true,
+          article: { select: { id: true, title: true } },
+          user: { select: { id: true, username: true, displayName: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    }
 
-  if (type === 'all' || type === 'likes') {
-    data.likes = await db.like.findMany({
-      select: {
-        id: true, createdAt: true,
-        article: { select: { id: true, title: true } },
-        user: { select: { id: true, username: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
-  }
+    if (type === 'all' || type === 'likes') {
+      data.likes = await db.like.findMany({
+        select: {
+          id: true, createdAt: true,
+          article: { select: { id: true, title: true } },
+          user: { select: { id: true, username: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    }
 
-  if (type === 'all' || type === 'rsvps') {
-    data.rsvps = await db.rsvp.findMany({
-      select: {
-        id: true, status: true, createdAt: true,
-        event: { select: { id: true, title: true } },
-        user: { select: { id: true, username: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+    if (type === 'all' || type === 'rsvps') {
+      data.rsvps = await db.rsvp.findMany({
+        select: {
+          id: true, status: true, createdAt: true,
+          event: { select: { id: true, title: true } },
+          user: { select: { id: true, username: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    }
+  } catch (e: any) {
+    console.error('[api/export GET] query error:', e?.message?.slice(0, 200))
+    // Return an empty JSON payload instead of crashing so the admin UI
+    // can show a graceful "no data" state.
+    return NextResponse.json(
+      { error: 'Gagal mengekspor data. Database tidak dapat diakses.', dbError: true },
+      { status: 500 }
+    )
   }
 
   if (format === 'json') {

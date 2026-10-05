@@ -11,38 +11,43 @@ export async function GET(req: NextRequest) {
   const unreadOnly = url.searchParams.get('unreadOnly') === '1'
   const limit = Math.min(Number(url.searchParams.get('limit') ?? '20'), 50)
 
-  const notifications = await db.notification.findMany({
-    where: {
-      recipientId: session.userId,
-      ...(unreadOnly ? { read: false } : {}),
-    },
-    include: {
-      actor: {
-        select: { id: true, username: true, displayName: true, role: true },
+  try {
+    const notifications = await db.notification.findMany({
+      where: {
+        recipientId: session.userId,
+        ...(unreadOnly ? { read: false } : {}),
       },
-    },
-    orderBy: { createdAt: 'desc' },
-    take: limit,
-  })
+      include: {
+        actor: {
+          select: { id: true, username: true, displayName: true, role: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    })
 
-  const unreadCount = await db.notification.count({
-    where: { recipientId: session.userId, read: false },
-  })
+    const unreadCount = await db.notification.count({
+      where: { recipientId: session.userId, read: false },
+    })
 
-  return NextResponse.json({
-    notifications: notifications.map((n) => ({
-      id: n.id,
-      type: n.type,
-      actor: n.actor,
-      articleId: n.articleId,
-      eventId: n.eventId,
-      content: n.content,
-      read: n.read,
-      createdAt: n.createdAt,
-      timeAgo: getTimeAgo(n.createdAt),
-    })),
-    unreadCount,
-  })
+    return NextResponse.json({
+      notifications: notifications.map((n) => ({
+        id: n.id,
+        type: n.type,
+        actor: n.actor,
+        articleId: n.articleId,
+        eventId: n.eventId,
+        content: n.content,
+        read: n.read,
+        createdAt: n.createdAt,
+        timeAgo: getTimeAgo(n.createdAt),
+      })),
+      unreadCount,
+    })
+  } catch (e: any) {
+    console.error('[api/notifications GET] query error:', e?.message?.slice(0, 100))
+    return NextResponse.json({ notifications: [], unreadCount: 0, dbError: true })
+  }
 }
 
 // POST /api/notifications — mark all as read
@@ -51,13 +56,21 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Anda harus login.' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
-  
+
   if (body?.action === 'markAllRead') {
-    await db.notification.updateMany({
-      where: { recipientId: session.userId, read: false },
-      data: { read: true },
-    })
-    return NextResponse.json({ ok: true, marked: 'all' })
+    try {
+      await db.notification.updateMany({
+        where: { recipientId: session.userId, read: false },
+        data: { read: true },
+      })
+      return NextResponse.json({ ok: true, marked: 'all' })
+    } catch (e: any) {
+      console.error('[api/notifications POST] error:', e?.message?.slice(0, 200))
+      return NextResponse.json(
+        { error: 'Gagal menandai notifikasi sebagai dibaca. Coba lagi.' },
+        { status: 500 }
+      )
+    }
   }
 
   return NextResponse.json({ error: 'Aksi tidak valid.' }, { status: 400 })
