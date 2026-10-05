@@ -25,18 +25,43 @@ export function HomeView() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/articles?limit=6')
+    // cache: 'no-store' + Array.isArray defensive check — prevents
+    // 'e.map is not a function' TypeError if API returns unexpected shape.
+    fetch('/api/articles?limit=6', { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => setArticles(d.articles || []))
+      .then((d) => setArticles(Array.isArray(d.articles) ? d.articles : []))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
   const [spotlight, ...rest] = articles
 
-  const subscribe = (e: React.FormEvent) => {
+  const subscribe = async (e: React.FormEvent) => {
     e.preventDefault()
-    toast.success('Terima kasih! Email Anda terdaftar untuk update.')
+    const form = e.target as HTMLFormElement
+    const emailInput = form.querySelector('input[type="email"]') as HTMLInputElement
+    const email = emailInput?.value?.trim()
+    if (!email) {
+      toast.error('Email wajib diisi.')
+      return
+    }
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ email }),
+      })
+      const d = await res.json()
+      if (d.error) {
+        toast.error(d.error)
+        return
+      }
+      toast.success('Terima kasih! Email Anda terdaftar untuk update angkatan.')
+      emailInput.value = ''
+    } catch {
+      toast.error('Gagal terhubung ke server. Coba lagi.')
+    }
   }
 
   return (

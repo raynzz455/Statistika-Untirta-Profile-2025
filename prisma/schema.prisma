@@ -54,7 +54,9 @@ model User {
   articles     Article[]
   events       Event[]
   galleryItems Gallery[]
-  students     Student[]
+  // NOTE: students relation removed — see Student model for rationale.
+  // Google OAuth users are not in this users table, so a FK would
+  // reject their claim attempt. owner_id is enforced at app layer.
   rsvps        Rsvp[]
   comments     Comment[]
   likes        Like[]
@@ -86,8 +88,14 @@ model Student {
   instagram   String?
   asalDaerah  String?  @map("asal_daerah")
   imageUrl    String?  @map("image_url")
-  ownerId     String?  @map("owner_id") // user id who can edit this profile
-  owner       User?    @relation(fields: [ownerId], references: [id])
+  // NOTE: ownerId intentionally has NO Prisma @relation/FK to users.id.
+  // Google OAuth users have userId = Supabase UUID (e.g. "a1b2c3d4-...")
+  // but the Prisma `users` table only holds custom-session test users
+  // (admin/admin etc., with CUID format ids). A FK constraint would reject
+  // any Google OAuth user's claim attempt with a 500 (FK violation).
+  // The relation is enforced at the app layer (see /api/students/claim).
+  // SQL-side: drop the FK constraint by running scripts/drop-students-owner-fk.sql
+  ownerId     String?  @unique @map("owner_id") // user id (Supabase UUID OR custom session CUID) who can edit this profile
   email       String?  @unique // optional: pre-registered email for auto-link on OAuth signup
   claimedAt   DateTime? @map("claimed_at") // when student claimed their profile via NIM
   createdAt   DateTime @default(now()) @map("created_at")
@@ -101,7 +109,38 @@ model Student {
   // Portfolio items (websites, projects, certificates)
   portfolios  StudentPortfolio[]
 
+  // Class history (rotation tracking)
+  classHistory StudentClassHistory[]
+
   @@map("students")
+}
+
+// Student Class History — tracks class assignment per semester
+// One record per student per semester. When rotation happens (sem 3 & 5),
+// a NEW record is added (not updating the old one) to preserve history.
+//
+// Example for student Ahmad Fauzi:
+//   semester 1, kelas A, year 2025/2026, is_current=true
+//   semester 2, kelas A, year 2025/2026
+//   semester 3, kelas B, year 2026/2027  (rotation!)
+//   semester 4, kelas B, year 2026/2027
+//   semester 5, kelas A, year 2027/2028  (rotation back!)
+//   semester 6, kelas A, year 2027/2028
+model StudentClassHistory {
+  id          String   @id @default(cuid())
+  studentId   String   @map("student_id")
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  semester    Int      // 1-8
+  kelas       String   // "A" | "B"
+  angkatan    String   @default("2025") // year of admission
+  academicYear String? @map("academic_year") // e.g. "2025/2026"
+  isCurrent   Boolean  @default(false) @map("is_current") // marks current semester
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([studentId, semester]) // one record per student per semester
+  @@index([studentId, semester])
+  @@index([kelas, semester])
+  @@map("student_class_history")
 }
 
 // Student Portfolio — supports 3 types:
@@ -359,4 +398,19 @@ model Aspirasi {
   @@index([approved, createdAt])
   @@index([category, approved])
   @@map("aspirasi")
+}
+
+// Subscriber — email subscriptions for angkatan updates
+// Users enter their email on the home page "Berlangganan Info Angkatan" form.
+// No login required — anyone (including alumni, dosen, parents) can subscribe.
+// Admin can view the subscriber list and send bulk emails manually.
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?  // optional — for personalization
+  active    Boolean  @default(true) // can unsubscribe (set to false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("subscribers")
 }

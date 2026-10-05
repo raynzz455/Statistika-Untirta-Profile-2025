@@ -28,7 +28,6 @@ export function DirectoryView() {
   const [q, setQ] = useState('')
   const [kelasFilter, setKelasFilter] = useState<'all' | 'A' | 'B'>('all')
   const [showFilter, setShowFilter] = useState(false)
-  const [yearFilter, setYearFilter] = useState<string>('all') // 'all' | '2025' | '2024' etc.
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 12
 
@@ -37,9 +36,12 @@ export function DirectoryView() {
     const params = new URLSearchParams()
     if (kelasFilter !== 'all') params.set('kelas', kelasFilter)
     if (q) params.set('q', q)
-    fetch(`/api/students?${params}`)
+    // cache: 'no-store' bypasses browser cache — guarantees fresh data after
+    // a profile update (so user sees their new photo/bio immediately).
+    // Backend also sets Cache-Control: no-store, but this is defensive.
+    fetch(`/api/students?${params}`, { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => setStudents(d.students || []))
+      .then((d) => setStudents(Array.isArray(d.students) ? d.students : []))
       .catch(() => setStudents([]))
       .finally(() => setLoading(false))
   }
@@ -51,21 +53,16 @@ export function DirectoryView() {
   }, [q, kelasFilter])
 
   // Reset page on filter change
-  useEffect(() => setPage(1), [q, kelasFilter, yearFilter])
+  useEffect(() => setPage(1), [q, kelasFilter])
 
-  // Filter by year (NIM prefix: 333625XXXXXX → year 2025)
-  const yearFiltered = yearFilter === 'all' ? students : students.filter((s) => {
-    // NIM format: 3336250001 → year is 2025 (from digits 4-5)
-    const yearPart = s.nim.slice(4, 6) // "25" for 2025
-    const year = '20' + yearPart
-    return year === yearFilter
-  })
+  // Year filter REMOVED — this website is specifically for Angkatan 2025.
+  // All students belong to angkatan 2025, so filtering by year is pointless.
 
-  const totalPages = Math.ceil(yearFiltered.length / PAGE_SIZE)
+  const totalPages = Math.ceil(students.length / PAGE_SIZE)
   useEffect(() => {
     if (page > totalPages) setPage(1)
   }, [totalPages, page])
-  const paged = yearFiltered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const paged = students.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="max-w-5xl mx-auto page-enter">
@@ -91,20 +88,8 @@ export function DirectoryView() {
             />
           </div>
           <div className="flex gap-2">
-            {/* Year filter */}
-            <div className="relative">
-              <select
-                value={yearFilter}
-                onChange={(e) => setYearFilter(e.target.value)}
-                className="flex items-center gap-2 border border-[var(--brand-ink)] py-2 px-3 bg-[var(--brand-surface-2)] text-xs uppercase font-bold focus:outline-none cursor-pointer appearance-none pr-8"
-              >
-                <option value="all">Semua Tahun</option>
-                <option value="2025">Angkatan 2025</option>
-                <option value="2024">Angkatan 2024</option>
-                <option value="2023">Angkatan 2023</option>
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
-            </div>
+            {/* Year filter REMOVED — this website is for Angkatan 2025 only.
+                No need to filter by year when all students are from 2025. */}
             {/* Class filter */}
             <button
               onClick={() => setShowFilter(!showFilter)}
@@ -210,7 +195,7 @@ export function DirectoryView() {
           page={page}
           totalPages={totalPages}
           onPageChange={setPage}
-          total={yearFiltered.length}
+          total={students.length}
           pageSize={PAGE_SIZE}
         />
         </>

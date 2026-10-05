@@ -27,10 +27,11 @@ export function Recommendations() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/recommendations')
+    // cache: 'no-store' + Array.isArray defensive check
+    fetch('/api/recommendations', { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
-        setRecs(d.recommendations || [])
+        setRecs(Array.isArray(d.recommendations) ? d.recommendations : [])
         setBasedOnHistory(d.basedOnHistory || false)
         setHistorySize(d.historySize || 0)
       })

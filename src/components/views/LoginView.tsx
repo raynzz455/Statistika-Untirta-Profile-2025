@@ -46,9 +46,20 @@ export function LoginView() {
       }
       setUser(d.user)
       toast.success(`Selamat datang, ${d.user.displayName || d.user.username}!`)
+
+      // === Smart post-login routing (custom-session path) ===
+      // Matches the Google OAuth post-login routing in /auth/callback:
+      //   - admin                  → admin panel (custom-session admin = test admin)
+      //   - linked student         → profile page
+      //   - no linked student       → claim-profile (enter NIM)
       if (d.user.role === 'admin') {
         setView('admin')
+      } else if (d.user.studentId) {
+        setView('profile', d.user.studentId)
       } else {
+        // For test users (user/user, fauzi/fauzi) without linked students,
+        // send to settings so they can manage their account. The NIM claim
+        // flow is primarily for Google OAuth users (real students).
         setView('settings')
       }
     } catch {
@@ -193,6 +204,18 @@ export function LoginView() {
               </svg>
               Masuk dengan Google
             </a>
+
+            {/* Signup link */}
+            <p className="text-center text-xs font-body text-[var(--brand-ink-muted)] mt-3">
+              Belum punya akun?{' '}
+              <button
+                type="button"
+                onClick={() => setView('signup')}
+                className="text-[var(--brand-navy)] underline hover:no-underline font-bold"
+              >
+                Daftar akun baru →
+              </button>
+            </p>
 
             {/* Divider */}
             <div className="flex items-center gap-3 my-5">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useAppStore } from '@/lib/store'
-import { Check, X as XIcon, HelpCircle, Users } from 'lucide-react'
+import { Check, X as XIcon, HelpCircle, Users, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface RsvpUser {
@@ -40,6 +40,7 @@ export function EventRSVP({ eventId }: { eventId: string }) {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [showAttendees, setShowAttendees] = useState(false)
+  const [rsvpError, setRsvpError] = useState<string | null>(null)
 
   const load = () => {
     if (!user) {
@@ -47,14 +48,41 @@ export function EventRSVP({ eventId }: { eventId: string }) {
       return
     }
     setLoading(true)
-    fetch(`/api/events/${eventId}/rsvp`)
-      .then((r) => r.json())
-      .then((d) => {
-        setMyStatus(d.myStatus as Status | null)
-        setCounts(d.counts)
-        setRsvps(d.rsvps || [])
+    setRsvpError(null)
+    // CRITICAL: cache: 'no-store' — without this, the browser caches the
+    // GET response. After POST creates a new RSVP, load() is called but
+    // the browser serves the CACHED old response (with 0 counts).
+    // This was THE root cause of "pesertanya tidak bertambah sama sekali".
+    fetch(`/api/events/${eventId}/rsvp`, { cache: 'no-store' })
+      .then((r) => {
+        if (!r.ok) {
+          console.warn('[EventRSVP] GET not ok:', r.status)
+        }
+        return r.json()
       })
-      .catch(() => {})
+      .then((d) => {
+        console.log('[EventRSVP] load response:', {
+          myStatus: d.myStatus,
+          counts: d.counts,
+          rsvpCount: d.rsvps?.length,
+          dbError: d.dbError,
+          _debug: d._debug,
+          _error: d._error,
+        })
+        // If the GET returned a dbError, show it in the error banner
+        if (d.dbError) {
+          setRsvpError(d._error || 'Gagal memuat data RSVP. Mungkin ada masalah koneksi database.')
+        } else {
+          setRsvpError(null)
+        }
+        setMyStatus(d.myStatus as Status | null)
+        setCounts(d.counts || { hadir: 0, mungkin: 0, tidak: 0, total: 0 })
+        setRsvps(Array.isArray(d.rsvps) ? d.rsvps : [])
+      })
+      .catch((err) => {
+        console.error('[EventRSVP] load error:', err)
+        setRsvpError('Gagal memuat data RSVP.')
+      })
       .finally(() => setLoading(false))
   }
 
@@ -69,22 +97,36 @@ export function EventRSVP({ eventId }: { eventId: string }) {
       return
     }
     setSubmitting(true)
+    setRsvpError(null)
     try {
+      console.log('[EventRSVP] POST status:', status, 'eventId:', eventId)
       const res = await fetch(`/api/events/${eventId}/rsvp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store', // bypass browser cache on POST too
         body: JSON.stringify({ status }),
       })
       const d = await res.json()
+      console.log('[EventRSVP] POST response:', { ok: res.ok, status: res.status, data: d })
+
       if (d.error) {
-        toast.error(d.error)
+        // Show error toast with LONGER duration (10s) so user actually sees it
+        toast.error(d.error, { duration: 10000 })
+        setRsvpError(d.error)
         return
       }
+
+      // POST succeeded — update local state + reload fresh data
       setMyStatus(status)
-      load()
+      // Use setTimeout(0) to ensure the POST transaction is committed
+      // before the GET fetch (defensive — PgBouncer transaction mode
+      // might have slight visibility delay)
+      setTimeout(() => load(), 100)
       toast.success(`Anda ${STATUS_CONFIG[status].label.toLowerCase()} event ini.`)
-    } catch {
-      toast.error('Gagal memperbarui RSVP.')
+    } catch (err) {
+      console.error('[EventRSVP] POST exception:', err)
+      toast.error('Gagal terhubung ke server. Coba lagi.', { duration: 10000 })
+      setRsvpError('Gagal memperbarui RSVP. Coba lagi.')
     } finally {
       setSubmitting(false)
     }
@@ -109,6 +151,20 @@ export function EventRSVP({ eventId }: { eventId: string }) {
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Error banner — shows if POST or GET fails (visible, not just a toast) */}
+      {rsvpError && (
+        <div className="border border-[var(--brand-maroon)] bg-[var(--brand-orange)]/10 p-2 text-xs text-[var(--brand-maroon)] flex items-center gap-2">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="flex-grow">{rsvpError}</span>
+          <button
+            onClick={() => { setRsvpError(null); load() }}
+            className="text-[10px] uppercase tracking-widest font-condensed underline hover:no-underline"
+          >
+            Coba lagi
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
         {(['hadir', 'mungkin', 'tidak'] as Status[]).map((s) => {
           const cfg = STATUS_CONFIG[s]
@@ -163,8 +219,10 @@ export function EventRSVP({ eventId }: { eventId: string }) {
                   <ul className="text-xs space-y-0.5">
                     {list.map((r) => (
                       <li key={r.id} className="text-[var(--brand-ink)] truncate">
-                        {r.user.displayName || r.user.username}
-                        {r.user.id === user.id && (
+                        {/* Defensive: r.user may be null for Google OAuth users
+                            not in Prisma users table. Use optional chaining. */}
+                        {r.user?.displayName || r.user?.username || 'Anggota'}
+                        {r.user?.id === user?.id && (
                           <span className="ml-1 text-[9px] uppercase tracking-widest font-condensed text-[var(--brand-orange)]">
                             Anda
                           </span>

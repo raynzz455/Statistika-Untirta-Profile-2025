@@ -19,9 +19,8 @@ const NAV: { label: string; view: ViewName; short?: string }[] = [
   { label: 'Tentang', view: 'about' },
 ]
 
-const STATS = [
-  { label: 'Jumlah Anggota', value: '120' },
-  { label: 'Jumlah Kelas', value: '2' },
+// Static stats (don't change — they describe the angkatan, not the DB)
+const STATIC_STATS = [
   { label: 'Angkatan Ke', value: '03' },
   { label: 'Tahun Masuk', value: '25' },
 ]
@@ -33,6 +32,25 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  // Dynamic stats — fetched from /api/stats on mount
+  const [memberCount, setMemberCount] = useState<number | null>(null)
+  const [classCount, setClassCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    // Fetch dynamic stats (member count + class count) from the database
+    fetch('/api/stats', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        setMemberCount(typeof d.students === 'number' ? d.students : 0)
+        // Count distinct classes that have at least 1 student
+        const classes = (d.classA > 0 ? 1 : 0) + (d.classB > 0 ? 1 : 0)
+        setClassCount(classes || 0)
+      })
+      .catch(() => {
+        setMemberCount(0)
+        setClassCount(0)
+      })
+  }, [])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -100,9 +118,24 @@ export function Header() {
         </div>
       </header>
 
-      {/* Stats bar */}
+      {/* Stats bar — first 2 are dynamic (from DB), last 2 are static */}
       <div className="bg-[var(--brand-orange)]/15 border-b border-[var(--brand-border)] py-2 px-4 md:px-8 flex items-center overflow-x-auto gap-4 md:gap-6 hide-scrollbar whitespace-nowrap">
-        {STATS.map((stat, idx) => (
+        {/* Dynamic: Jumlah Anggota (from DB student count) */}
+        <div className="flex-shrink-0 flex items-center gap-2 border-r border-[var(--brand-ink)]/20 pr-4 md:pr-6">
+          <span className="font-body text-sm md:text-base font-semibold text-[var(--brand-ink)]">Jumlah Anggota</span>
+          <span className="bg-[var(--brand-navy)] text-[var(--brand-surface)] font-bold font-body text-sm md:text-base px-2 py-0.5">
+            {memberCount === null ? '…' : memberCount}
+          </span>
+        </div>
+        {/* Dynamic: Jumlah Kelas (from DB — count distinct classes with students) */}
+        <div className="flex-shrink-0 flex items-center gap-2 border-r border-[var(--brand-ink)]/20 pr-4 md:pr-6">
+          <span className="font-body text-sm md:text-base font-semibold text-[var(--brand-ink)]">Jumlah Kelas</span>
+          <span className="bg-[var(--brand-navy)] text-[var(--brand-surface)] font-bold font-body text-sm md:text-base px-2 py-0.5">
+            {classCount === null ? '…' : classCount}
+          </span>
+        </div>
+        {/* Static: Angkatan Ke + Tahun Masuk (describe the angkatan, not the DB) */}
+        {STATIC_STATS.map((stat, idx) => (
           <div
             key={idx}
             className="flex-shrink-0 flex items-center gap-2 border-r border-[var(--brand-ink)]/20 pr-4 md:pr-6 last:border-0"

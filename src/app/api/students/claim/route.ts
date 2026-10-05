@@ -1,35 +1,19 @@
 // ============================================================================
 // POST /api/students/claim — NIM-based student profile claim
 // ============================================================================
-// Allows an authenticated user (via Google OAuth or custom session) to
-// "claim" their pre-listed student profile by entering their NIM.
-//
-// Flow:
-//   1. Admin seeds student list with NIMs (students table, ownerId=NULL)
-//   2. User signs up via Google OAuth → auth.users + profiles created
-//   3. User enters their NIM → this endpoint links the student record
-//   4. students.ownerId = auth.users.id, students.claimedAt = now()
-//   5. User can now edit their student profile (photo, bio, portfolio, etc.)
-//
-// Security:
-//   - Requires authentication (any logged-in user can claim)
-//   - NIM must match a student in the database
-//   - Student must NOT be already claimed (ownerId must be NULL)
-//   - If already claimed by same user → return success (idempotent)
-//   - If already claimed by different user → return error
-//
-// Body: { nim: string }
-// Response: { ok: true, student: {...} } or { error: string }
+// Uses getSession() directly (not getCurrentUser) for reliability.
+// getSession() now works for BOTH custom session AND Google OAuth users
+// (the stat_session cookie is set by /auth/callback for both auth methods).
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUser } from '@/lib/auth-server'
+import { getSession } from '@/lib/session'
 
 export async function POST(req: NextRequest) {
-  // === Auth check ===
-  const user = await getCurrentUser()
-  if (!user) {
+  // === Auth check — use getSession() directly (works for both auth methods) ===
+  const session = await getSession()
+  if (!session) {
     return NextResponse.json(
       { error: 'Anda harus login untuk mengklaim profil mahasiswa.' },
       { status: 401 }
@@ -52,17 +36,26 @@ export async function POST(req: NextRequest) {
   }
 
   // === Find student by NIM ===
-  const student = await db.student.findUnique({
-    where: { nim },
-    select: {
-      id: true,
-      name: true,
-      nim: true,
-      kelas: true,
-      ownerId: true,
-      claimedAt: true,
-    },
-  })
+  let student
+  try {
+    student = await db.student.findUnique({
+      where: { nim },
+      select: {
+        id: true,
+        name: true,
+        nim: true,
+        kelas: true,
+        ownerId: true,
+        claimedAt: true,
+      },
+    })
+  } catch (e: any) {
+    console.error('[claim] db.student.findUnique error:', e.message?.slice(0, 100))
+    return NextResponse.json(
+      { error: 'Gagal mengakses database. Pastikan database sudah di-setup dengan benar.' },
+      { status: 500 }
+    )
+  }
 
   if (!student) {
     return NextResponse.json(
@@ -76,8 +69,7 @@ export async function POST(req: NextRequest) {
 
   // === Check if already claimed ===
   if (student.ownerId) {
-    if (student.ownerId === user.id) {
-      // Already claimed by THIS user — idempotent success
+    if (student.ownerId === session.userId) {
       return NextResponse.json({
         ok: true,
         alreadyClaimed: true,
@@ -86,7 +78,6 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Claimed by someone else — security: don't reveal who
     return NextResponse.json(
       {
         error: `Profil mahasiswa dengan NIM "${nim}" sudah diklaim oleh akun lain. Jika ini adalah NIM Anda, hubungi admin.`,
@@ -97,26 +88,34 @@ export async function POST(req: NextRequest) {
   }
 
   // === Link student to current user ===
-  const updated = await db.student.update({
-    where: { id: student.id },
-    data: {
-      ownerId: user.id,
-      claimedAt: new Date(),
-    },
-    select: {
-      id: true,
-      name: true,
-      nim: true,
-      kelas: true,
-      nickname: true,
-    },
-  })
+  try {
+    const updated = await db.student.update({
+      where: { id: student.id },
+      data: {
+        ownerId: session.userId,
+        claimedAt: new Date(),
+      },
+      select: {
+        id: true,
+        name: true,
+        nim: true,
+        kelas: true,
+        nickname: true,
+      },
+    })
 
-  return NextResponse.json({
-    ok: true,
-    message: `Berhasil! Profil mahasiswa "${updated.name}" (${updated.nim}) telah ter-link ke akun Anda.`,
-    student: updated,
-  })
+    return NextResponse.json({
+      ok: true,
+      message: `Berhasil! Profil mahasiswa "${updated.name}" (${updated.nim}) telah ter-link ke akun Anda.`,
+      student: updated,
+    })
+  } catch (e: any) {
+    console.error('[claim] db.student.update error:', e.message?.slice(0, 100))
+    return NextResponse.json(
+      { error: 'Gagal meng-update profil. Coba lagi atau hubungi admin.' },
+      { status: 500 }
+    )
+  }
 }
 
 // GET endpoint for documentation
@@ -125,13 +124,7 @@ export async function GET() {
     endpoint: '/api/students/claim',
     method: 'POST',
     description: 'Claim a pre-listed student profile by entering your NIM',
-    body: { nim: 'string (your NIM, e.g. "3336250001")' },
+    body: { nim: 'string (your NIM, e.g. "3338250031")' },
     authRequired: true,
-    response: {
-      success: { ok: true, student: { id, name, nim, kelas, nickname } },
-      alreadyClaimed: { ok: true, alreadyClaimed: true, studentId: 'string' },
-      notFound: { error: 'NIM tidak ditemukan' },
-      conflict: { error: 'Sudah diklaim akun lain' },
-    },
   })
 }

@@ -36,9 +36,10 @@ export function ActivityFeed() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/activity')
+    // cache: 'no-store' + Array.isArray defensive check
+    fetch('/api/activity', { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => setItems(d.activity || []))
+      .then((d) => setItems(Array.isArray(d.activity) ? d.activity : []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false))
   }, [])

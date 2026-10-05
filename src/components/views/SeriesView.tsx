@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useAppStore } from '@/lib/store'
 import { PlaceholderImage } from '@/components/PlaceholderImage'
 import { ScrollReveal } from '@/components/ScrollReveal'
+import { ImageUploader } from '@/components/ImageUploader'
 import { BookOpen, Plus, X, Layers, Calendar, User } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -27,9 +28,11 @@ export function SeriesView() {
 
   const load = () => {
     setLoading(true)
-    fetch('/api/series')
+    // cache: 'no-store' — bypass browser cache so series list always
+    // shows fresh data after create/edit.
+    fetch('/api/series', { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => setSeries(d.series || []))
+      .then((d) => setSeries(Array.isArray(d.series) ? d.series : []))
       .catch(() => setSeries([]))
       .finally(() => setLoading(false))
   }
@@ -114,13 +117,13 @@ export function SeriesView() {
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-condensed uppercase font-bold mb-1">URL Gambar Cover (opsional)</label>
-              <input
-                type="url"
+              <ImageUploader
                 value={form.imageUrl}
-                onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                className="w-full border border-[var(--brand-ink)] p-2 text-sm bg-[var(--brand-surface)]"
-                placeholder="https://contoh.com/cover.jpg"
+                onChange={(url) => setForm({ ...form, imageUrl: url })}
+                label="Gambar Cover (opsional)"
+                hint="Upload file (drag & drop juga bisa) atau tempel URL gambar. Otomatis diresize + convert ke WebP."
+                altText={form.title || 'Cover series'}
+                grayscale
               />
             </div>
           </div>
@@ -190,7 +193,7 @@ export function SeriesView() {
                 )}
                 <div className="mt-auto border-t border-dashed border-[var(--brand-ink)]/30 pt-3 flex items-center justify-between text-[11px] text-[var(--brand-ink-muted)]">
                   <span className="flex items-center gap-1">
-                    <User className="w-3 h-3" /> {s.creator.displayName || s.creator.username}
+                    <User className="w-3 h-3" /> {s.creator?.displayName || s.creator?.username || 'Unknown'}
                   </span>
                   <span className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" /> {formatDate(s.createdAt)}

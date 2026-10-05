@@ -13,6 +13,7 @@ export function SettingsView() {
   const setView = useAppStore((s) => s.setView)
   const [profile, setProfile] = useState({
     name: '',
+    nickname: '',
     tagline: 'Mencari makna di balik data.',
     bio: 'Saya adalah mahasiswa Statistika Untirta yang sedang belajar.',
     instagram: '',
@@ -40,6 +41,7 @@ export function SettingsView() {
           setStudentId(mine.id)
           setProfile({
             name: mine.name,
+            nickname: mine.nickname || '',
             tagline: mine.tagline || '',
             bio: mine.bio || '',
             instagram: mine.instagram || '',
@@ -78,15 +80,24 @@ export function SettingsView() {
 
     // If we have a student profile linked, update it via API
     if (studentId) {
+      // IMPORTANT: send imageUrl as the ACTUAL string value (even if empty).
+      // Previously we sent `imageUrl: profile.imageUrl || undefined` which
+      // converted empty string → undefined → backend skipped the field →
+      // photo was never cleared in DB when user clicked the X remove button.
+      // Now: empty string reaches the PUT handler, which calls
+      // db.student.update({ data: { imageUrl: '' } }) — clears the field.
       const res = await fetch(`/api/students/${studentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        // cache: 'no-store' ensures the PUT itself isn't cached (defensive)
+        cache: 'no-store',
         body: JSON.stringify({
+          nickname: profile.nickname, // panggilan — tampil di pojok kanan atas kartu direktori
           tagline: profile.tagline,
           bio: profile.bio,
           instagram: profile.instagram,
           asalDaerah: profile.asalDaerah,
-          imageUrl: profile.imageUrl || undefined,
+          imageUrl: profile.imageUrl, // empty string is intentional — clears DB field
           lagu: profile.lagu || null,
           laguArtis: profile.laguArtis || null,
           laguUrl: profile.laguUrl || null,
@@ -95,6 +106,12 @@ export function SettingsView() {
       const d = await res.json()
       if (d.error) return toast.error(d.error)
       toast.success('Profil berhasil diperbarui!')
+      // Force a refetch of /api/students so any other view (DirectoryView)
+      // gets fresh data when user navigates there. The backend now sets
+      // Cache-Control: no-store, but in case the browser still has an old
+      // response cached from before, this busts it.
+      // (We don't await — fire and forget.)
+      fetch('/api/students', { cache: 'no-store' }).catch(() => {})
     } else {
       // No linked student - just simulate save (could be extended to create student profile)
       toast.success('Profil pengguna disimpan (belum tertaut ke direktori mahasiswa).')
@@ -119,8 +136,8 @@ export function SettingsView() {
           </div>
         )}
 
-        <div className="flex flex-col md:flex-row gap-6 items-start">
-          <div className="w-32 h-32 flex-shrink-0 border border-[var(--brand-ink)] bg-[var(--brand-surface-2)] relative overflow-hidden">
+        <div className="flex flex-col md:flex-row gap-6 md:items-start">
+          <div className="w-32 h-32 flex-shrink-0 border border-[var(--brand-ink)] bg-[var(--brand-surface-2)] relative overflow-hidden self-center md:self-auto">
             <PlaceholderImage
               alt="Foto Profil"
               src={profile.imageUrl || undefined}
@@ -130,7 +147,16 @@ export function SettingsView() {
               <ImageIcon className="w-5 h-5 text-white opacity-0 hover:opacity-100" />
             </div>
           </div>
-          <div className="flex-grow w-full flex flex-col gap-4">
+          {/* BUG FIX: previously `flex-grow w-full` — `w-full` (width:100%)
+              overrode the flex sizing, forcing the column to 100% of parent
+              width (which is the FULL container, ignoring the 128px photo on
+              the left). On md+ this caused the form fields to overflow past
+              the photo column and break the layout ("mental ke kanan").
+              New pattern: `w-full md:w-auto md:flex-1 md:min-w-0` —
+                mobile (flex-col): w-full = full width below the photo
+                md+ (flex-row): md:w-auto + md:flex-1 = take remaining space
+                                md:min-w-0 = allow shrinking (prevents overflow) */}
+          <div className="w-full md:w-auto md:flex-1 md:min-w-0 flex flex-col gap-4">
             <div>
               <label className="block text-xs font-condensed uppercase font-bold mb-1 flex items-center gap-1">
                 <UserIcon className="w-3 h-3" /> Nama Tampilan
@@ -147,6 +173,22 @@ export function SettingsView() {
                   Nama resmi hanya dapat diubah admin. Hubungi admin untuk perubahan.
                 </p>
               )}
+            </div>
+            <div>
+              <label className="block text-xs font-condensed uppercase font-bold mb-1 flex items-center gap-1">
+                <UserCheck className="w-3 h-3" /> Nama Panggilan
+              </label>
+              <input
+                type="text"
+                value={profile.nickname}
+                onChange={(e) => setProfile({ ...profile, nickname: e.target.value })}
+                maxLength={20}
+                className="w-full border border-[var(--brand-ink)] p-2.5 text-sm bg-[var(--brand-surface-2)]"
+                placeholder="cth: Rayn, Aldi, Dikri"
+              />
+              <p className="text-[10px] text-[var(--brand-ink-muted)] mt-1">
+                Nama panggilan sehari-hari. Tampil di pojok kanan atas kartu direktori & di detail profil.
+              </p>
             </div>
             <div>
               <label className="block text-xs font-condensed uppercase font-bold mb-1">Instagram</label>
@@ -268,10 +310,10 @@ export function SettingsView() {
               </div>
               <div className="border border-[var(--brand-border)] bg-[var(--brand-surface-2)] p-2">
                 <p className="font-condensed uppercase tracking-widest text-[#FF0000] mb-0.5 flex items-center gap-1">
-                  <Youtube className="w-3 h-3" /> YouTube
+                  <Youtube className="w-3 h-3" /> YouTube / Music
                 </p>
                 <p className="text-[9px] text-[var(--brand-ink-muted)] font-mono truncate">
-                  youtu.be/... atau watch?v=...
+                  youtube.com/watch?v= atau music.youtube.com
                 </p>
               </div>
               <div className="border border-[var(--brand-border)] bg-[var(--brand-surface-2)] p-2">

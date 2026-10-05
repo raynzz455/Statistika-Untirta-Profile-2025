@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAppStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { ArrowLeft, Search, UserCheck, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Search, UserCheck, AlertCircle, Loader2, CheckCircle2, UserCircle2, ShieldCheck } from 'lucide-react'
 
 interface ClaimResponse {
   ok?: boolean
@@ -25,6 +25,7 @@ interface ClaimResponse {
 export function ClaimProfileView() {
   const setView = useAppStore((s) => s.setView)
   const user = useAppStore((s) => s.user)
+  const setUser = useAppStore((s) => s.setUser)
   const [nim, setNim] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [claimedStudent, setClaimedStudent] = useState<ClaimResponse['student'] | null>(null)
@@ -38,6 +39,83 @@ export function ClaimProfileView() {
   }, [user, setView])
 
   if (!user) return null
+
+  // === Already-claimed state ===
+  // If the user already has a linked student (returned by /api/auth/me as
+  // studentId), they shouldn't fill out the claim form again. Show a banner
+  // with a direct link to their profile instead.
+  if (user.studentId && !claimedStudent) {
+    return (
+      <div className="max-w-2xl mx-auto page-enter">
+        <button
+          onClick={() => setView('home')}
+          className="inline-flex items-center text-xs uppercase tracking-widest mb-6 hover:text-[var(--brand-navy)] transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Beranda
+        </button>
+
+        <div className="border-2 border-[var(--brand-navy)] bg-[var(--brand-surface-2)] p-8 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-[var(--brand-navy)]/10 text-[var(--brand-navy)] rounded-full mb-4">
+            <UserCircle2 className="w-8 h-8" />
+          </div>
+          <h1 className="font-serif text-2xl md:text-3xl font-bold mb-2 text-[var(--brand-ink)]">
+            Profil Anda Sudah Ter-link
+          </h1>
+          <p className="font-serif italic text-sm text-[var(--brand-ink-muted)] mb-6 max-w-md mx-auto">
+            Akun Google Anda sudah dikaitkan dengan profil mahasiswa.
+            Anda dapat mengelola foto, bio, tagline, lagu tema, dan portofolio dari halaman profil.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => setView('profile', user.studentId)}
+              className="bg-[var(--brand-navy)] text-[var(--brand-surface)] px-6 py-2.5 font-condensed uppercase tracking-widest text-sm hover:bg-[var(--brand-navy-light)] transition-colors inline-flex items-center justify-center gap-2"
+            >
+              <UserCircle2 className="w-4 h-4" /> Lihat Profil Saya
+            </button>
+            <button
+              onClick={() => setView('settings')}
+              className="border border-[var(--brand-ink)] px-6 py-2.5 font-condensed uppercase tracking-widest text-sm hover:bg-[var(--brand-surface)] transition-colors"
+            >
+              Pengaturan Akun
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Admin doesn't need to claim — show a banner redirecting to admin panel
+  if (user.role === 'admin') {
+    return (
+      <div className="max-w-2xl mx-auto page-enter">
+        <button
+          onClick={() => setView('home')}
+          className="inline-flex items-center text-xs uppercase tracking-widest mb-6 hover:text-[var(--brand-navy)] transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Beranda
+        </button>
+        <div className="border-2 border-[var(--brand-orange)] bg-[var(--brand-orange)]/10 p-8 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-[var(--brand-orange)]/20 text-[var(--brand-orange)] rounded-full mb-4">
+            <ShieldCheck className="w-8 h-8" />
+          </div>
+          <h1 className="font-serif text-2xl md:text-3xl font-bold mb-2 text-[var(--brand-ink)]">
+            Anda adalah Admin
+          </h1>
+          <p className="font-serif italic text-sm text-[var(--brand-ink-muted)] mb-6 max-w-md mx-auto">
+            Akun Anda memiliki role <span className="font-mono not-italic">admin</span>.
+            Admin tidak perlu mengklaim profil mahasiswa — gunakan panel admin
+            untuk mengelola seluruh data angkatan.
+          </p>
+          <button
+            onClick={() => setView('admin')}
+            className="bg-[var(--brand-navy)] text-[var(--brand-surface)] px-6 py-2.5 font-condensed uppercase tracking-widest text-sm hover:bg-[var(--brand-navy-light)] transition-colors inline-flex items-center justify-center gap-2"
+          >
+            <ShieldCheck className="w-4 h-4" /> Buka Panel Admin
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,6 +149,12 @@ export function ClaimProfileView() {
         }
         if (data.student) {
           setClaimedStudent(data.student)
+          // Refresh /api/auth/me so the store gets the updated studentId
+          // (enables "Lihat Profil Saya" button in header etc.)
+          fetch('/api/auth/me')
+            .then((r) => r.json())
+            .then((d) => d.user && setUser(d.user))
+            .catch(() => {})
         } else if (data.studentId) {
           // Already claimed by same user — redirect to profile
           setTimeout(() => setView('profile', data.studentId), 1500)

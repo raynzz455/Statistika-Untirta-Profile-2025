@@ -15,6 +15,7 @@ import { ArticleDetailView } from '@/components/views/ArticleDetailView'
 import { EventsView } from '@/components/views/EventsView'
 import { AboutView } from '@/components/views/AboutView'
 import { LoginView } from '@/components/views/LoginView'
+import { SignupView } from '@/components/views/SignupView'
 import { AdminView } from '@/components/views/AdminView'
 import { SettingsView } from '@/components/views/SettingsView'
 import { MemberProfileView } from '@/components/views/MemberProfileView'
@@ -24,11 +25,12 @@ import { DosenDetailView } from '@/components/views/DosenDetailView'
 import { AspirasiView } from '@/components/views/AspirasiView'
 import { ClaimProfileView } from '@/components/views/ClaimProfileView'
 import { BackToTop } from '@/components/BackToTop'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import type { ViewName } from '@/lib/store'
 
 const VALID_VIEWS: ViewName[] = [
   'home', 'directory', 'profile', 'classes', 'gallery',
-  'articles', 'article-detail', 'events', 'about', 'login', 'admin', 'settings', 'member-profile',
+  'articles', 'article-detail', 'events', 'about', 'login', 'signup', 'admin', 'settings', 'member-profile',
   'series', 'series-detail', 'dosen-detail', 'aspirasi', 'claim-profile',
 ]
 
@@ -41,14 +43,34 @@ export default function Home() {
   const setAuthLoading = useAppStore((s) => s.setAuthLoading)
   const setView = useAppStore((s) => s.setView)
 
-  // Load current session on mount
+  // Load current session on mount + apply smart post-login routing
   useEffect(() => {
     fetch('/api/auth/me')
       .then((r) => r.json())
-      .then((d) => setUser(d.user || null))
+      .then((d) => {
+        const u = d.user || null
+        setUser(u)
+
+        // === Smart post-login routing (client-side safety net) ===
+        // The /auth/callback route already redirects based on role/studentId,
+        // but if the user lands here directly via /#/claim-profile (e.g. via
+        // back button, shared link, or stale cookie) AND they already have a
+        // linked student, bounce them to their profile instead.
+        if (typeof window !== 'undefined' && u) {
+          const hash = window.location.hash.replace(/^#\/?/, '')
+          const [v] = hash.split('/')
+          if (v === 'claim-profile' && u.studentId) {
+            // Already linked — skip claim page, go straight to profile
+            setView('profile', u.studentId)
+          } else if (v === 'claim-profile' && u.role === 'admin') {
+            // Admins don't need to claim — send to home (admin panel)
+            setView('home')
+          }
+        }
+      })
       .catch(() => setUser(null))
       .finally(() => setAuthLoading(false))
-  }, [setUser, setAuthLoading])
+  }, [setUser, setAuthLoading, setView])
 
   // Sync from URL hash on mount
   useEffect(() => {
@@ -107,6 +129,8 @@ export default function Home() {
         return <AboutView />
       case 'login':
         return user ? <SettingsView /> : <LoginView />
+      case 'signup':
+        return user ? <SettingsView /> : <SignupView />
       case 'admin':
         return <AdminView />
       case 'settings':
@@ -145,7 +169,14 @@ export default function Home() {
       <OpeningAnimation />
       <div className="flex-grow flex flex-col w-full max-w-[1200px] mx-auto bg-[var(--brand-surface)] shadow-md min-h-screen">
         <Header />
-        <main className="flex-grow p-4 md:p-8">{renderView()}</main>
+        {/* ErrorBoundary wraps renderView() so a crash in ANY view
+            (e.g. "e.map is not a function" TypeError) shows a friendly
+            fallback UI instead of a white screen "Application error". */}
+        <main className="flex-grow p-4 md:p-8">
+          <ErrorBoundary>
+            {renderView()}
+          </ErrorBoundary>
+        </main>
         <Footer />
       </div>
       <BackToTop />

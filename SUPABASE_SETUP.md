@@ -236,6 +236,81 @@ await supabaseBrowser.auth.signOut()
 
 ---
 
+## Post-Login Routing Workflow (Wajib dipahami)
+
+Setelah login berhasil (baik via Google OAuth maupun custom session),
+sistem akan mengarahkan user ke halaman yang sesuai berdasarkan status
+mereka. Routing ini dijalankan di **dua tempat** untuk redundansi:
+
+### 1. Server-side redirect (`src/app/auth/callback/route.ts`)
+
+Setelah OAuth callback berhasil, server menentukan URL tujuan akhir:
+
+| Kondisi User | URL Tujuan | Alasan |
+|---|---|---|
+| `role === 'admin'` (Google OAuth + profile.role='admin') | `/#/` (Beranda) | Admin tidak perlu klaim NIM, panel admin tersedia di Header |
+| Sudah ada student yang ter-link (`students.owner_id = user.id`) | `/#/profile/<studentId>` | Langsung ke profil mahasiswa yang sudah diklaim |
+| Belum ada student ter-link (first-time Google OAuth user) | `/#/claim-profile` | Form input NIM untuk klaim profil |
+
+### 2. Client-side safety net (`src/app/page.tsx`)
+
+Setelah `fetch('/api/auth/me')`, frontend juga cek hash URL:
+- Jika user mendarat di `/#/claim-profile` tapi sudah punya `studentId`
+  → auto-redirect ke `/#/profile/<studentId>` (mis: dari tombol back)
+- Jika user mendarat di `/#/claim-profile` tapi `role === 'admin'`
+  → auto-redirect ke `/#/` (Beranda)
+
+### 3. Custom session login (`src/components/views/LoginView.tsx`)
+
+Untuk login username/password (akun demo admin/admin, user/user, fauzi/fauzi):
+- Admin → `/#/admin` (panel admin)
+- Sudah ada student ter-link → `/#/profile/<studentId>`
+- Belum ada student ter-link → `/#/settings` (kelola akun)
+
+### ClaimProfileView Behavior (`src/components/views/ClaimProfileView.tsx`)
+
+View ini juga pintar — tidak selalu menampilkan form NIM:
+
+| Kondisi | Yang ditampilkan |
+|---|---|
+| `user.studentId` ada | Banner "Profil Anda Sudah Ter-link" + tombol "Lihat Profil Saya" |
+| `user.role === 'admin'` | Banner "Anda adalah Admin" + tombol "Buka Panel Admin" |
+| Lainnya (first-time Google OAuth user) | Form input NIM |
+
+### Critical Fix: Cookie Loss Bug
+
+Sebelumnya, `auth/callback` membuat `res = NextResponse.redirect(<next>)`,
+membiarkan Supabase set cookies via `setAll()`, lalu membuat
+`NextResponse.redirect(<claim-profile>, { headers: res.headers })`.
+Cookies yang di-set via `res.cookies.set()` disimpan di cookie store
+terpisah — TIDAK otomatis ter-merge ke `headers` map biasa.
+Akibatnya: redirect ke claim-profile tapi session cookie hilang,
+frontend baca `user: null`, lalu redirect ke Beranda.
+
+**Fix:** Buat SATU response redirect dengan URL final upfront,
+set semua cookies (Supabase + stat_session) di response itu,
+return langsung. Jika perlu ganti URL final (mis: admin → home),
+rebuild response baru TAPI copy semua cookies via `res.cookies.getAll()`.
+
+### Critical Fix: FK Constraint pada students.owner_id
+
+Sebelumnya, Prisma schema mendeklarasikan `Student.owner User? @relation(...)`,
+yang membuat FK constraint `students.owner_id → users.id`. Masalahnya:
+- Google OAuth user → `session.userId = Supabase UUID` (e.g. `a1b2c3d4-...`)
+- Prisma `users` table hanya berisi custom-session test users (CUID `clxxxx`)
+- Saat `db.student.update({ ownerId: <UUID> })` → FK violation → **500 error**
+
+**Fix:**
+1. Hapus `owner User? @relation(...)` dari Prisma schema → `owner_id`
+   menjadi plain String column tanpa FK
+2. Tambah `@unique` di `ownerId` (relasi 1:1 — satu user hanya punya
+   satu student profile)
+3. Run `bun run db:generate` untuk regenerasi Prisma client
+4. Untuk produksi Supabase: run `scripts/drop-students-owner-fk.sql`
+   (drop FK constraint + add unique constraint — idempotent)
+
+---
+
 ## Step 9 — Deploy ke Vercel
 
 1. Push repo ke GitHub (sudah dilakukan)
@@ -281,6 +356,22 @@ await supabaseBrowser.auth.signOut()
 ### Email tidak terkirim (forgot password)
 - Free tier Supabase punya limit 4 email/jam
 - Untuk produksi: pakai custom SMTP di Authentication → Email Templates → SMTP
+
+### Claim NIM gagal: 500 "Gagal meng-update profil. Coba lagi atau hubungi admin."
+- **Penyebab:** FK constraint `students.owner_id → users.id` menolak Google
+  OAuth UUID (karena Google OAuth user tidak ada di Prisma `users` table,
+  hanya di `auth.users` + `profiles`).
+- **Fix:** Run `scripts/drop-students-owner-fk.sql` di Supabase SQL Editor.
+  Script ini drop FK constraint + add unique constraint (idempotent).
+- Setelahnya, login ulang Google OAuth, lalu coba claim NIM lagi.
+
+### Setelah Google OAuth login, redirect ke Beranda (bukan claim-profile)
+- **Penyebab:** Cookie loss bug di `/auth/callback` — dua `NextResponse.redirect`
+  tidak share cookie store otomatis.
+- **Fix:** Sudah diperbaiki di commit terbaru. Pastikan code di
+  `src/app/auth/callback/route.ts` membuat SATU response redirect dengan
+  URL final upfront, lalu re-apply cookies via `res.cookies.getAll()`
+  jika perlu ganti URL final.
 
 ---
 

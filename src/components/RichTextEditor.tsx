@@ -24,6 +24,15 @@ import {
 } from '@mdxeditor/editor'
 
 // Plugins initialized once at module level for performance
+// CRITICAL FIX: BoldItalicUnderlineToggles and ListsToggle expect ARRAYS
+// for their `options` prop, NOT strings. Passing a string like
+// "bold italic underline" causes the component to call .map() on the
+// string internally → strings don't have .map() →
+// "TypeError: e.map is not a function" crash when the article form renders.
+// This was THE root cause of the article creation crash.
+// Also note: BoldItalicUnderlineToggles uses CAPITALIZED option names
+// ('Bold', 'Italic', 'Underline'), while ListsToggle uses lowercase
+// ('bullet', 'number', 'check').
 const PLUGINS: MDXEditorProps['plugins'] = [
   headingsPlugin(),
   listsPlugin(),
@@ -37,11 +46,11 @@ const PLUGINS: MDXEditorProps['plugins'] = [
       <>
         <UndoRedo />
         <Separator />
-        <BoldItalicUnderlineToggles options="bold italic underline" />
+        <BoldItalicUnderlineToggles options={['Bold', 'Italic', 'Underline']} />
         <Separator />
         <BlockTypeSelect />
         <Separator />
-        <ListsToggle options="both" />
+        <ListsToggle options={['bullet', 'number']} />
         <Separator />
         <CreateLink />
         <InsertImage />

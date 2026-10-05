@@ -5,13 +5,13 @@
 // in Supabase Storage. Falls back to local filesystem (/public/uploads/)
 // when Supabase is not configured (for local dev without Supabase project).
 //
-// Bucket: `mahasiswa-photos` (private — uses signed URLs)
-// Folder structure: {userId}/{timestamp}-{random}.{ext}
+// Bucket: `mahasiswa-photos` (PUBLIC — stable public URLs)
+// Folder structure: {userId}/{timestamp}-{random}.webp
 //
 // Usage:
-//   import { uploadFile, getSignedUrl, deleteFile } from '@/lib/storage'
+//   import { uploadFile, uploadBuffer, getPublicUrl, deleteFile } from '@/lib/storage'
 //   const { url, path } = await uploadFile(file, userId)
-//   const signedUrl = await getSignedUrl(path, 60) // 60 seconds
+//   const publicUrl = getPublicUrl(path)
 //   await deleteFile(path)
 // ============================================================================
 
@@ -30,13 +30,14 @@ const ALLOWED_MIME_TYPES: Record<string, string> = {
   'image/gif': 'gif',
   'image/webp': 'webp',
   'image/svg+xml': 'svg',
+  'image/avif': 'avif',
 }
 
-// Max file size: 5 MB
-const MAX_FILE_SIZE = 5 * 1024 * 1024
+// Max file size: 8 MB (matches frontend validation in ImageUploader.tsx)
+const MAX_FILE_SIZE = 8 * 1024 * 1024
 
 interface UploadResult {
-  url: string // public URL or signed URL (Supabase) or /uploads/... path (local)
+  url: string // public URL (Supabase) or /uploads/... path (local) — STABLE, no expiry
   path: string // storage path (for Supabase) or filename (for local)
   storage: 'supabase' | 'local'
   size: number
@@ -48,7 +49,7 @@ interface UploadOptions {
   folder?: string
   /** Override filename (default: auto-generated) */
   filename?: string
-  /** Max size in bytes (default: 5 MB) */
+  /** Max size in bytes (default: 8 MB) */
   maxSize?: number
   /** Allowed MIME types (default: image/* whitelist) */
   allowedMimes?: string[]
@@ -61,11 +62,12 @@ function isSupabaseConfigured(): boolean {
   )
 }
 
-function generateFilename(originalName: string): string {
-  const ext = path.extname(originalName).toLowerCase()
+function generateFilename(originalName: string, ext?: string): string {
+  // If explicit extension provided (e.g. '.webp' after sharp conversion), use it
+  const finalExt = ext ?? path.extname(originalName).toLowerCase()
   const random = randomBytes(8).toString('hex')
   const timestamp = Date.now()
-  return `${timestamp}-${random}${ext}`
+  return `${timestamp}-${random}${finalExt}`
 }
 
 function validateFile(
@@ -90,29 +92,36 @@ function validateFile(
 }
 
 /**
- * Upload a file to Supabase Storage (or local filesystem as fallback).
+ * Upload a Buffer to Supabase Storage (or local filesystem as fallback).
+ * Used when you need to preprocess the file (e.g. resize with sharp) before
+ * uploading — the /api/upload route uses this after sharp conversion.
  *
- * @param file - File object from FormData
- * @param folder - Optional folder (e.g. user ID) to organize files
- * @returns UploadResult with public URL or local path
+ * @param buffer - File contents as Buffer
+ * @param mimeType - MIME type (e.g. 'image/webp' after sharp conversion)
+ * @param originalName - Original filename (used for extension fallback)
+ * @param options - Upload options (folder, filename, etc.)
  */
-export async function uploadFile(
-  file: File,
+export async function uploadBuffer(
+  buffer: Buffer,
+  mimeType: string,
+  originalName: string,
   options?: UploadOptions
 ): Promise<UploadResult> {
-  const buffer = Buffer.from(await file.arrayBuffer())
-  const mimeType = file.type
-  const size = file.size
+  const size = buffer.length
 
-  const validation = validateFile(file, mimeType, size, options)
+  const validation = validateFile(buffer, mimeType, size, options)
   if (!validation.valid) {
     throw new Error(validation.error)
   }
 
-  const filename = options?.filename ?? generateFilename(file.name)
+  // Force .webp extension if mimeType is webp (after sharp conversion)
+  const forcedExt = mimeType === 'image/webp' ? '.webp'
+    : mimeType === 'image/avif' ? '.avif'
+    : undefined
+  const filename = options?.filename ?? generateFilename(originalName, forcedExt)
   const folder = options?.folder ?? 'misc'
 
-  // === LOCAL FALLBACK === (when Supabase not configured)
+  // === LOCAL FALLBACK === (when Supabase not configured — local dev only)
   if (!isSupabaseConfigured()) {
     const localPath = `${LOCAL_UPLOAD_DIR}/${folder}`
     await fs.mkdir(localPath, { recursive: true })
@@ -128,10 +137,12 @@ export async function uploadFile(
   }
 
   // === SUPABASE STORAGE ===
+  // Uses admin client (service role) to bypass RLS — the route handler has
+  // already authenticated the user via getSession() / getCurrentUser().
   const supabase = await createSupabaseAdminClient()
   const storagePath = `${folder}/${filename}`
 
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from(BUCKET_NAME)
     .upload(storagePath, buffer, {
       contentType: mimeType,
@@ -143,27 +154,14 @@ export async function uploadFile(
     throw new Error(`Supabase Storage error: ${error.message}`)
   }
 
-  // For private buckets, generate signed URL (expires in 1 hour)
-  const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+  // Bucket is PUBLIC — return stable public URL (no signed URL, no expiry).
+  // Format: https://[project].supabase.co/storage/v1/object/public/mahasiswa-photos/{folder}/{filename}
+  const { data: publicData } = supabase.storage
     .from(BUCKET_NAME)
-    .createSignedUrl(storagePath, 3600)
-
-  if (signedUrlError || !signedUrlData?.signedUrl) {
-    // Fall back to public URL if bucket is public
-    const { data: publicData } = supabase.storage
-      .from(BUCKET_NAME)
-      .getPublicUrl(storagePath)
-    return {
-      url: publicData.publicUrl,
-      path: storagePath,
-      storage: 'supabase',
-      size,
-      mimeType,
-    }
-  }
+    .getPublicUrl(storagePath)
 
   return {
-    url: signedUrlData.signedUrl,
+    url: publicData.publicUrl,
     path: storagePath,
     storage: 'supabase',
     size,
@@ -172,36 +170,41 @@ export async function uploadFile(
 }
 
 /**
- * Get a fresh signed URL for a file (used when the old signed URL expires).
+ * Upload a File object to Supabase Storage (or local filesystem as fallback).
+ * Thin wrapper around uploadBuffer() — converts File to Buffer first.
  *
- * @param storagePath - Path returned from uploadFile()
- * @param expiresIn - Seconds until URL expires (default: 3600 = 1 hour)
+ * @param file - File object from FormData
+ * @param options - Upload options (folder, filename, etc.)
  */
-export async function getSignedUrl(
-  storagePath: string,
-  expiresIn: number = 3600
-): Promise<string | null> {
+export async function uploadFile(
+  file: File,
+  options?: UploadOptions
+): Promise<UploadResult> {
+  const buffer = Buffer.from(await file.arrayBuffer())
+  return uploadBuffer(buffer, file.type, file.name, options)
+}
+
+/**
+ * Get the public URL for a stored file (Supabase) or local path (dev).
+ * Use this to resolve stored `path` values back to URLs without re-uploading.
+ *
+ * @param storagePath - Path returned from uploadFile() / uploadBuffer()
+ */
+export function getPublicUrl(storagePath: string): string {
   if (!isSupabaseConfigured()) {
     // Local fallback — files are public via /uploads/...
     return `/uploads/${storagePath}`
   }
 
-  const supabase = await createSupabaseAdminClient()
-  const { data, error } = await supabase.storage
-    .from(BUCKET_NAME)
-    .createSignedUrl(storagePath, expiresIn)
-
-  if (error || !data?.signedUrl) {
-    return null
-  }
-
-  return data.signedUrl
+  // Build public URL manually (avoid needing an async Supabase client for this)
+  const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  return `${projectUrl}/storage/v1/object/public/${BUCKET_NAME}/${storagePath}`
 }
 
 /**
  * Delete a file from Supabase Storage (or local filesystem as fallback).
  *
- * @param storagePath - Path returned from uploadFile()
+ * @param storagePath - Path returned from uploadFile() / uploadBuffer()
  */
 export async function deleteFile(storagePath: string): Promise<boolean> {
   if (!isSupabaseConfigured()) {

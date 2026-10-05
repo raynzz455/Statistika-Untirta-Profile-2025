@@ -1,21 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { withCache, CachePresets } from '@/lib/cache'
+
+// Cache-Control header — set to no-store so the directory always shows
+// fresh data. We intentionally DO NOT cache /api/students because users
+// frequently update their photos/bio via PUT /api/students/[id], and they
+// expect to see the change immediately when they navigate to the directory.
+// (Previously this used CachePresets.publicList which cached 60s + 300s SWR
+// — that caused "profile tidak ter-update" bugs after save.)
+const NO_STORE = { headers: { 'Cache-Control': 'no-store, max-age=0' } }
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url)
   const kelas = url.searchParams.get('kelas')
   const q = url.searchParams.get('q')
 
-  const students = await db.student.findMany({
-    where: {
-      ...(kelas && kelas !== 'all' ? { kelas } : {}),
-      ...(q ? { name: { contains: q } } : {}),
-    },
-    orderBy: { nim: 'asc' },
-  })
-  return withCache(NextResponse.json({ students }), CachePresets.publicList)
+  let students: any[] = []
+  try {
+    students = await db.student.findMany({
+      where: {
+        ...(kelas && kelas !== 'all' ? { kelas } : {}),
+        ...(q ? { name: { contains: q } } : {}),
+      },
+      orderBy: { nim: 'asc' },
+    })
+  } catch (e: any) {
+    // Database not yet configured (e.g. fresh Supabase project, missing
+    // DATABASE_URL, or schema not pushed). Return an empty list instead
+    // of a 500 — the frontend gracefully renders "Belum ada mahasiswa"
+    // instead of crashing.
+    console.error('[api/students] query error:', e?.message?.slice(0, 100))
+    return NextResponse.json({ students: [], dbError: true }, NO_STORE)
+  }
+  return NextResponse.json({ students }, NO_STORE)
 }
 
 export async function POST(req: NextRequest) {
