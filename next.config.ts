@@ -92,6 +92,18 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],
       },
+      // === API routes — NEVER cache (always return fresh data) ===
+      // This is the #1 performance fix: without this, Vercel Edge cache
+      // and browser cache serve STALE responses. Users see old data
+      // after CRUD operations and think the app is "slow".
+      // Routes that explicitly set their own Cache-Control header will
+      // override this default.
+      {
+        source: "/api/(.*)",
+        headers: [
+          { key: "Cache-Control", value: "no-store, max-age=0" },
+        ],
+      },
     ];
   },
 };
